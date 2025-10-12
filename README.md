@@ -1,2 +1,2 @@
-# UltimateTicTacToe
-A Go application for playing Ultimate Tic Tac Toe
+# Ultimate Tic Tac Toe
+A Go application for playing Ultimate Tic Tac Toe.
