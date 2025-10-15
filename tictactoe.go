@@ -22,8 +22,16 @@ func main() {
   readBuffer := make([]byte, 1)
 
   state := game.CreateState()
-  for !state.Done {
-    fmt.Println(state.Board.ToString())
+  var done bool
+  var winner game.Player
+  for ; !done; done, winner = state.GetWinState() {
+    fmt.Println(state.GetBoard().ToString() + "\r\n")
+    if state.GetCurrentPlayer() == game.X {
+      fmt.Print("Cross' turn to move: ")
+    } else {
+      fmt.Print("Naught's turn to move: ")
+    }
+
     for didMove := false; !didMove; {
       os.Stdin.Read(readBuffer)
       if readBuffer[0] == 27 { // Escape
@@ -34,6 +42,7 @@ func main() {
         rowNumber := blockNumber / 3
         columnNumber := blockNumber % 3
         if (state.Place(rowNumber, columnNumber)) {
+          fmt.Println(blockNumber + 1)
           didMove = true
         } else {
           beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
@@ -43,6 +52,14 @@ func main() {
       }
     }
     fmt.Println("\r\n")
+  }
+
+  fmt.Println(state.GetBoard().ToString() + "\r\n")
+
+  switch (winner) {
+  case game.X: fmt.Println("Cross is the winner!")
+  case game.O: fmt.Println("Naughts is the winner!")
+  default: fmt.Println("It's a tie.")
   }
 }
 
