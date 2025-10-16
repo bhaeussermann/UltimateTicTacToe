@@ -2,59 +2,39 @@ package main
 
 import (
 	"fmt"
-	"os"
-
-	"golang.org/x/term"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
-	"github.com/gen2brain/beeep"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player"
 )
 
 func main() {
   printInstructions()
-  
-  oldState, error := term.MakeRaw(int(os.Stdin.Fd()))
-  if error != nil {
-    fmt.Println(error)
-    os.Exit(1)
-  }
-  defer term.Restore(int(os.Stdin.Fd()), oldState)
-  readBuffer := make([]byte, 1)
 
   state := game.CreateState()
+  playerX := &player.Keyboard {}
+  playerO := &player.Keyboard {}
+
   var done bool
   var winner game.Player
   for ; !done; done, winner = state.GetWinState() {
-    fmt.Println(state.GetBoard().ToString() + "\r\n")
-    if state.GetCurrentPlayer() == game.X {
-      fmt.Print("Cross' turn to move: ")
-    } else {
-      fmt.Print("Naught's turn to move: ")
-    }
+    fmt.Println()
+    fmt.Println(state.GetBoard().ToString())
 
-    for didMove := false; !didMove; {
-      os.Stdin.Read(readBuffer)
-      if readBuffer[0] == 27 { // Escape
-        return
-      }
-      if (readBuffer[0] >= byte('1')) && (readBuffer[0] <= byte('9')) {
-        blockNumber := byte(readBuffer[0]) - byte('1')
-        rowNumber := blockNumber / 3
-        columnNumber := blockNumber % 3
-        if (state.Place(rowNumber, columnNumber)) {
-          fmt.Println(blockNumber + 1)
-          didMove = true
-        } else {
-          beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
-        }
-      } else {
-        beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
-      }
+    var currentPlayer player.Player
+    if state.GetCurrentPlayer() == game.X {
+      currentPlayer = playerX
+    } else {
+      currentPlayer = playerO
     }
-    fmt.Println("\r\n")
+    move, shouldContinue := currentPlayer.GetMove(state)
+    if !shouldContinue {
+      return
+    }
+    state.Place(move)
   }
 
-  fmt.Println(state.GetBoard().ToString() + "\r\n")
+  fmt.Println()
+  fmt.Println(state.GetBoard().ToString())
 
   switch (winner) {
   case game.X: fmt.Println("Cross is the winner!")
@@ -73,5 +53,4 @@ func printInstructions() {
   fmt.Println(" 4 | 5 | 6")
   fmt.Println("----------")
   fmt.Println(" 7 | 8 | 9")
-  fmt.Println()
 }

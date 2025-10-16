@@ -9,6 +9,11 @@ type State struct {
 
 type Player byte
 
+type Move struct {
+  RowNumber byte
+  ColumnNumber byte
+}
+
 func CreateState() *State {
   var state State
   state.currentPlayer = X
@@ -28,12 +33,16 @@ func (state *State) GetWinState() (bool, Player) {
   return state.done, state.winner
 }
 
-func (state *State) Place(rowNumber byte, columnNumber byte) bool {
-  if state.done || state.board[rowNumber][columnNumber] != None {
+func (state *State) CanPlace(move *Move) bool {
+  return !state.done && state.board[move.RowNumber][move.ColumnNumber] == None
+}
+
+func (state *State) Place(move *Move) bool {
+  if !state.CanPlace(move) {
     return false
   }
 
-  state.board[rowNumber][columnNumber] = Cell(state.currentPlayer)
+  state.board[move.RowNumber][move.ColumnNumber] = Cell(state.currentPlayer)
   state.updateWinState()
   if state.currentPlayer == X {
     state.currentPlayer = O
