@@ -9,7 +9,7 @@ import (
 	"golang.org/x/term"
 )
 
-type Keyboard struct {};
+type Keyboard struct {}
 
 func (*Keyboard) GetMove(state *game.State) (*game.Move, bool) {
   oldState, error := term.MakeRaw(int(os.Stdin.Fd()))
@@ -19,6 +19,7 @@ func (*Keyboard) GetMove(state *game.State) (*game.Move, bool) {
   }
   defer term.Restore(int(os.Stdin.Fd()), oldState)
   
+  fmt.Println()
   if state.GetCurrentPlayer() == game.X {
     fmt.Print("Cross' turn to move: ")
   } else {
