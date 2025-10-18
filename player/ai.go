@@ -20,6 +20,10 @@ func getMoveLocation(state *game.State) location {
   
   board := state.GetBoard()
 
+  if board[1][1] == game.None {
+    return location { rowNumber: 1, columnNumber: 1 }
+  }
+
   winLocation := getWinLocation(board, me)
   if winLocation != nil {
     return *winLocation
@@ -35,15 +39,14 @@ func getMoveLocation(state *game.State) location {
     return *forkLocation
   }
 
-  location := getFirstLocation(board, []location {
-    location { rowNumber: 1, columnNumber: 1 },
-    location { rowNumber: 0, columnNumber: 0 },
-    location { rowNumber: 0, columnNumber: game.Size - 1 },
-    location { rowNumber: game.Size - 1, columnNumber: 0 },
-    location { rowNumber: game.Size - 1, columnNumber: game.Size - 1 },
-  })
-  if (location != nil) {
-    return *location
+  opponentForkLocations := getForkLocations(board, opponent)
+  if len(opponentForkLocations) == 1 {
+    return opponentForkLocations[0]
+  }
+
+  locationThatAvoidsForkLocation := getLocationOfLineExcludingLocations(board, me, opponentForkLocations)
+  if locationThatAvoidsForkLocation != nil {
+    return *locationThatAvoidsForkLocation
   }
 
   return *getLocation(board)
@@ -58,23 +61,30 @@ func getWinLocation(board *game.Board, player game.Player) *location {
 }
 
 func getForkLocation(board *game.Board, player game.Player) *location {
+  forkLocations := getForkLocations(board, player)
+  if len(forkLocations) == 0 { return nil } else { return &forkLocations[0] }
+}
+
+func getForkLocations(board *game.Board, player game.Player) []location {
   openLines := getOpenLines(board, player, 1)
+  var forkLocations []location
   var noneLocations []location
   for _, line := range openLines {
     for _, noneLocationInLine := range line.getNoneLocations(board) {
       if slices.Contains(noneLocations, noneLocationInLine) {
-        return &noneLocationInLine
+        forkLocations = append(forkLocations, noneLocationInLine)
       }
       noneLocations = append(noneLocations, noneLocationInLine)
     }
   }
-  return nil
+  return forkLocations
 }
 
-func getFirstLocation(board *game.Board, locations []location) *location {
-  for _, location := range locations {
-    if board[location.rowNumber][location.columnNumber] == game.None {
-      return &location
+func getLocationOfLineExcludingLocations(board *game.Board, player game.Player, excludeLocations []location) *location {
+  openLines := getOpenLines(board, player, 1)
+  for _, line := range openLines {
+    if !line.containsAny(excludeLocations) {
+      return &line.getNoneLocations(board)[0]
     }
   }
   return nil
@@ -99,6 +109,24 @@ func (line *line) getNoneLocations(board *game.Board) []location {
     }
   }
   return noneLocations
+}
+
+func (line *line) containsAny(locations []location) bool {
+  for _, location := range locations {
+    if line.contains(location) {
+      return true
+    }
+  }
+  return false
+}
+
+func (line *line) contains(location location) bool {
+  for _, lineLocation := range line.locations {
+    if lineLocation == location {
+      return true
+    }
+  }
+  return false
 }
 
 func getOpenLines(board *game.Board, player game.Player, targetPlayerCount byte) []line {
