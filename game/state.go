@@ -1,8 +1,9 @@
 package game
 
 type State struct {
-  board Board
+  superBoard SuperBoard
   currentPlayer Player
+  activeBoard *BoardReference
   done bool
   winner Player
 }
@@ -10,6 +11,7 @@ type State struct {
 type Player byte
 
 type Move struct {
+  Board *BoardReference
   RowNumber byte
   ColumnNumber byte
 }
@@ -21,8 +23,12 @@ func CreateState() *State {
   return &state
 }
 
-func (state *State) GetBoard() *Board {
-  return &state.board
+func (state *State) GetBoard() *SuperBoard {
+  return &state.superBoard
+}
+
+func (state *State) GetActiveBoard() *BoardReference {
+  return state.activeBoard
 }
 
 func (state *State) GetCurrentPlayer() Player {
@@ -33,8 +39,17 @@ func (state *State) GetWinState() (bool, Player) {
   return state.done, state.winner
 }
 
+func (state *State) CanPlaceIn(boardReference *BoardReference) bool {
+  return state.activeBoard == nil || &state.activeBoard == &boardReference
+}
+
 func (state *State) CanPlace(move *Move) bool {
-  return !state.done && state.board[move.RowNumber][move.ColumnNumber] == None
+  if state.done || (state.activeBoard == nil && move.Board == nil) {
+    return false
+  }
+  
+  board := state.getBoard(move)
+  return !board.Done && board.Cells[move.RowNumber][move.ColumnNumber] == None
 }
 
 func (state *State) Place(move *Move) bool {
@@ -42,8 +57,17 @@ func (state *State) Place(move *Move) bool {
     return false
   }
 
-  state.board[move.RowNumber][move.ColumnNumber] = Cell(state.currentPlayer)
+  board := state.getBoard(move)
+  board.Cells[move.RowNumber][move.ColumnNumber] = Cell(state.currentPlayer)
+  board.updateBoardOwner()
   state.updateWinState()
+
+  if state.superBoard[move.RowNumber][move.ColumnNumber].Done {
+    state.activeBoard = nil
+  } else {
+    state.activeBoard = &BoardReference{ RowNumber: move.RowNumber, ColumnNumber: move.ColumnNumber }
+  }
+
   if state.currentPlayer == X {
     state.currentPlayer = O
   } else {
@@ -52,82 +76,103 @@ func (state *State) Place(move *Move) bool {
   return true
 }
 
+func (state *State) getBoard(move *Move) *Board {
+  var boardReference *BoardReference
+  if state.activeBoard != nil { boardReference = state.activeBoard } else { boardReference = move.Board }
+  return &state.superBoard[boardReference.RowNumber][boardReference.ColumnNumber]
+}
+
+func (board *Board) updateBoardOwner() {
+  if hasAnyLineFilled(board.Cells, X) {
+    board.Done = true
+    board.Owner = X
+  }
+  if hasAnyLineFilled(board.Cells, O) {
+    board.Done = true
+    board.Owner = O
+  }
+  if !hasEmptyCell(board.Cells) {
+    board.Done = true
+    board.Owner = None
+  }
+}
+
 func (state *State) updateWinState() {
-  if state.board.hasAnyLineFilled(X) {
+  if hasAnyLineFilled(state.superBoard, X) {
     state.winner = X
     state.done = true
   }
-  if state.board.hasAnyLineFilled(O) {
+  if hasAnyLineFilled(state.superBoard, O) {
     state.winner = O
     state.done = true
   }
-  if !state.board.hasEmptyCell() {
+  if !hasEmptyCell(state.superBoard) {
     state.done = true
   }
 }
 
-func (board *Board) hasAnyLineFilled(player Player) bool {
-  return board.hasAnyRowFilled(player) || board.hasAnyColumnFilled(player) || board.hasDiagonal1Filled(player) || board.hasDiagonal2Filled(player)
+func hasAnyLineFilled(cellGrid CellGrid, player Player) bool {
+  return hasAnyRowFilled(cellGrid, player) || hasAnyColumnFilled(cellGrid, player) || hasDiagonal1Filled(cellGrid, player) || hasDiagonal2Filled(cellGrid, player)
 }
 
-func (board *Board) hasAnyRowFilled(player Player) bool {
+func hasAnyRowFilled(cellGrid CellGrid, player Player) bool {
   for _, rowNumber := range sideNumbers {
-    if board.hasRowFilled(rowNumber, player) {
+    if hasRowFilled(cellGrid, rowNumber, player) {
       return true;
     }
   }
   return false;
 }
 
-func (board *Board) hasRowFilled(rowNumber byte, player Player) bool {
+func hasRowFilled(cellGrid CellGrid, rowNumber byte, player Player) bool {
   for _, columnNumber := range sideNumbers {
-    if Player(board[rowNumber][columnNumber]) != player {
+    if Player(cellGrid.GetCell(rowNumber, columnNumber)) != player {
       return false;
     }
   }
   return true;
 }
 
-func (board *Board) hasAnyColumnFilled(player Player) bool {
+func hasAnyColumnFilled(cellGrid CellGrid, player Player) bool {
   for _, columnNumber := range sideNumbers {
-    if board.hasColumnFilled(columnNumber, player) {
+    if hasColumnFilled(cellGrid, columnNumber, player) {
       return true
     }
   }
   return false
 }
 
-func (board *Board) hasColumnFilled(columnNumber byte, player Player) bool {
+func hasColumnFilled(cellGrid CellGrid, columnNumber byte, player Player) bool {
   for _, rowNumber := range sideNumbers {
-    if Player(board[rowNumber][columnNumber]) != player {
+    if Player(cellGrid.GetCell(rowNumber, columnNumber)) != player {
       return false;
     }
   }
   return true;
 }
 
-func (board *Board) hasDiagonal1Filled(player Player) bool {
+func hasDiagonal1Filled(cellGrid CellGrid, player Player) bool {
   for _, rowNumber := range sideNumbers {
-    if Player(board[rowNumber][rowNumber]) != player {
+    if Player(cellGrid.GetCell(rowNumber, rowNumber)) != player {
       return false;
     }
   }
   return true;
 }
 
-func (board *Board) hasDiagonal2Filled(player Player) bool {
+func hasDiagonal2Filled(cellGrid CellGrid, player Player) bool {
   for _, rowNumber := range sideNumbers {
-    if Player(board[rowNumber][Size - rowNumber - 1]) != player {
+    if Player(cellGrid.GetCell(rowNumber, Size - rowNumber - 1)) != player {
       return false;
     }
   }
   return true;
 }
 
-func (board *Board) hasEmptyCell() bool {
+func hasEmptyCell(cellGrid CellGrid) bool {
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if board[rowNumber][columnNumber] == None {
+      if cellGrid.GetCell(rowNumber, columnNumber) == None {
         return true;
       }
     }

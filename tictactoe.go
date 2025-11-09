@@ -14,18 +14,19 @@ func main() {
   fmt.Println("=== Super Tic Tac Toe ===")
   fmt.Println()
   fmt.Println("Would you like to play as X or O?")
-
   playerSelection, didSelect := getPlayerSelection()
   if !didSelect {
     return
   }
   var playerX, playerO player.Player
+  playerX = &player.Keyboard{}
+  playerO = &player.Keyboard{}
   if playerSelection == game.X {
-    playerX = &player.Keyboard {}
-    playerO = &player.AI {}
+  //   playerX = &player.Keyboard {}
+  //   playerO = &player.AI {}
   } else {
-    playerX = &player.AI {}
-    playerO = &player.Keyboard {}
+  //   playerX = &player.AI {}
+  //   playerO = &player.Keyboard {}
   }
 
   printInstructions()
@@ -34,7 +35,7 @@ func main() {
   var winner game.Player
   for ; !done; done, winner = state.GetWinState() {
     fmt.Println()
-    fmt.Println(state.GetBoard().ToString())
+    fmt.Println(state.GetBoard().ToString(state.GetActiveBoard()))
 
     var currentPlayer player.Player
     if state.GetCurrentPlayer() == game.X {
@@ -50,7 +51,7 @@ func main() {
   }
 
   fmt.Println()
-  fmt.Println(state.GetBoard().ToString())
+  fmt.Println(state.GetBoard().ToString(nil))
   fmt.Println()
 
   switch (winner) {
@@ -63,11 +64,11 @@ func main() {
 func printInstructions() {
   fmt.Println("Type one of the following to place at the corresponding position (Esc to quit):")
   fmt.Println()
-  fmt.Println(" 1 | 2 | 3")
-  fmt.Println("----------")
-  fmt.Println(" 4 | 5 | 6")
-  fmt.Println("----------")
-  fmt.Println(" 7 | 8 | 9")
+  fmt.Println(" 1 │ 2 │ 3")
+  fmt.Println("───┼───┼──")
+  fmt.Println(" 4 │ 5 │ 6")
+  fmt.Println("───┼───┼──")
+  fmt.Println(" 7 │ 8 │ 9")
 }
 
 func getPlayerSelection() (game.Player, bool) {

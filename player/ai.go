@@ -14,45 +14,47 @@ func (*AI) GetMove(state *game.State) (*game.Move, bool) {
 }
 
 func getMoveLocation(state *game.State) location {
-  me := state.GetCurrentPlayer()
-  var opponent game.Player
-  if me == game.X { opponent = game.O } else { opponent = game.X }
+  return location { rowNumber: 1, columnNumber: 1 }
+
+  // me := state.GetCurrentPlayer()
+  // var opponent game.Player
+  // if me == game.X { opponent = game.O } else { opponent = game.X }
   
-  board := state.GetBoard()
+  // board := state.GetBoard()
 
-  if board[1][1] == game.None {
-    return location { rowNumber: 1, columnNumber: 1 }
-  }
+  // if board[1][1] == game.None {
+  //   return location { rowNumber: 1, columnNumber: 1 }
+  // }
 
-  winLocation := getWinLocation(board, me)
-  if winLocation != nil {
-    return *winLocation
-  }
+  // winLocation := getWinLocation(board, me)
+  // if winLocation != nil {
+  //   return *winLocation
+  // }
 
-  opponentWinLocation := getWinLocation(board, opponent)
-  if opponentWinLocation != nil {
-    return *opponentWinLocation
-  }
+  // opponentWinLocation := getWinLocation(board, opponent)
+  // if opponentWinLocation != nil {
+  //   return *opponentWinLocation
+  // }
 
-  forkLocation := getForkLocation(board, me)
-  if forkLocation != nil {
-    return *forkLocation
-  }
+  // forkLocation := getForkLocation(board, me)
+  // if forkLocation != nil {
+  //   return *forkLocation
+  // }
 
-  opponentForkLocations := getForkLocations(board, opponent)
-  if len(opponentForkLocations) == 1 {
-    return opponentForkLocations[0]
-  }
+  // opponentForkLocations := getForkLocations(board, opponent)
+  // if len(opponentForkLocations) == 1 {
+  //   return opponentForkLocations[0]
+  // }
 
-  locationThatAvoidsForkLocation := getLocationOfLineExcludingLocations(board, me, opponentForkLocations)
-  if locationThatAvoidsForkLocation != nil {
-    return *locationThatAvoidsForkLocation
-  }
+  // locationThatAvoidsForkLocation := getLocationOfLineExcludingLocations(board, me, opponentForkLocations)
+  // if locationThatAvoidsForkLocation != nil {
+  //   return *locationThatAvoidsForkLocation
+  // }
 
-  return *getLocation(board)
+  // return *getLocation(board)
 }
 
-func getWinLocation(board *game.Board, player game.Player) *location {
+func getWinLocation(board *game.BoardCells, player game.Player) *location {
   winLines := getOpenLines(board, player, 2)
   if len(winLines) == 0 {
     return nil
@@ -60,12 +62,12 @@ func getWinLocation(board *game.Board, player game.Player) *location {
   return &winLines[0].getNoneLocations(board)[0]
 }
 
-func getForkLocation(board *game.Board, player game.Player) *location {
+func getForkLocation(board *game.BoardCells, player game.Player) *location {
   forkLocations := getForkLocations(board, player)
   if len(forkLocations) == 0 { return nil } else { return &forkLocations[0] }
 }
 
-func getForkLocations(board *game.Board, player game.Player) []location {
+func getForkLocations(board *game.BoardCells, player game.Player) []location {
   openLines := getOpenLines(board, player, 1)
   var forkLocations []location
   var noneLocations []location
@@ -80,7 +82,7 @@ func getForkLocations(board *game.Board, player game.Player) []location {
   return forkLocations
 }
 
-func getLocationOfLineExcludingLocations(board *game.Board, player game.Player, excludeLocations []location) *location {
+func getLocationOfLineExcludingLocations(board *game.BoardCells, player game.Player, excludeLocations []location) *location {
   openLines := getOpenLines(board, player, 1)
   for _, line := range openLines {
     if !line.containsAny(excludeLocations) {
@@ -90,7 +92,7 @@ func getLocationOfLineExcludingLocations(board *game.Board, player game.Player, 
   return nil
 }
 
-func getLocation(board *game.Board) *location {
+func getLocation(board *game.BoardCells) *location {
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
       if board[rowNumber][columnNumber] == game.None {
@@ -101,7 +103,7 @@ func getLocation(board *game.Board) *location {
   return nil
 }
 
-func (line *line) getNoneLocations(board *game.Board) []location {
+func (line *line) getNoneLocations(board *game.BoardCells) []location {
   var noneLocations []location
   for _, location := range line.locations {
     if board[location.rowNumber][location.columnNumber] == game.None {
@@ -129,7 +131,7 @@ func (line *line) contains(location location) bool {
   return false
 }
 
-func getOpenLines(board *game.Board, player game.Player, targetPlayerCount byte) []line {
+func getOpenLines(board *game.BoardCells, player game.Player, targetPlayerCount byte) []line {
   var lines []line
   for _, line := range allLines {
     var playerCount byte
