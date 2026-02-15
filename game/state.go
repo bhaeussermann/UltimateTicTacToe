@@ -17,18 +17,32 @@ type Move struct {
 }
 
 func CreateState() *State {
-  var state State
-  state.currentPlayer = X
-  state.winner = None
-  return &state
+  return &State {
+    currentPlayer: X,
+    winner: None,
+  }
 }
 
-func (state *State) GetBoard() *SuperBoard {
+func (state *State) Copy() *State {
+  return &State {
+    superBoard: *state.superBoard.Copy(),
+    currentPlayer: state.currentPlayer,
+    activeBoard: state.activeBoard,
+    done: state.done,
+    winner: state.winner,
+  }
+}
+
+func (state *State) GetSuperBoard() *SuperBoard {
   return &state.superBoard
 }
 
 func (state *State) GetActiveBoard() *BoardReference {
   return state.activeBoard
+}
+
+func (state *State) GetBoard(boardReference *BoardReference) *Board {
+  return &state.superBoard[boardReference.RowNumber][boardReference.ColumnNumber]
 }
 
 func (state *State) GetCurrentPlayer() Player {

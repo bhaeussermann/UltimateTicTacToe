@@ -28,7 +28,7 @@ func (*Keyboard) GetMove(state *game.State) (*game.Move, bool) {
       return nil, false
     }
     boardReference = &game.BoardReference { RowNumber: cellReference.rowNumber, ColumnNumber: cellReference.columnNumber }
-    fmt.Println(state.GetBoard().ToString(boardReference))
+    fmt.Println(state.GetSuperBoard().ToString(boardReference))
     fmt.Print("Your move: ")
   }
 

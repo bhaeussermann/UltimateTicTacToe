@@ -29,6 +29,24 @@ type CellGrid interface {
   GetCell(rowNumber byte, columnNumber byte) Cell
 }
 
+func (superBoard SuperBoard) Copy() *SuperBoard {
+  superBoardCopy := SuperBoard{}
+  for boardRowIndex := 0; boardRowIndex < Size; boardRowIndex++ {
+    for boardColumnIndex := 0; boardColumnIndex < Size; boardColumnIndex++ {
+      board := &superBoard[boardRowIndex][boardColumnIndex]
+      boardCopy := &superBoardCopy[boardRowIndex][boardColumnIndex]
+      boardCopy.Done = board.Done
+      boardCopy.Owner = board.Owner
+      for rowIndex := 0; rowIndex < Size; rowIndex++ {
+        for columnIndex := 0; columnIndex < Size; columnIndex++ {
+          boardCopy.Cells[rowIndex][columnIndex] = board.Cells[rowIndex][columnIndex]
+        }
+      }
+    }
+  }
+  return &superBoardCopy
+}
+
 func (superBoard SuperBoard) GetCell(rowNumber byte, columnNumber byte) Cell {
   return superBoard[rowNumber][columnNumber].Owner
 }

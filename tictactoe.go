@@ -19,14 +19,12 @@ func main() {
     return
   }
   var playerX, playerO player.Player
-  playerX = &player.Keyboard{}
-  playerO = &player.Keyboard{}
   if playerSelection == game.X {
-  //   playerX = &player.Keyboard {}
-  //   playerO = &player.AI {}
+     playerX = &player.Keyboard{}
+     playerO = &player.AI{}
   } else {
-  //   playerX = &player.AI {}
-  //   playerO = &player.Keyboard {}
+     playerX = &player.AI{}
+     playerO = &player.Keyboard{}
   }
 
   printInstructions()
@@ -35,7 +33,7 @@ func main() {
   var winner game.Player
   for ; !done; done, winner = state.GetWinState() {
     fmt.Println()
-    fmt.Println(state.GetBoard().ToString(state.GetActiveBoard()))
+    fmt.Println(state.GetSuperBoard().ToString(state.GetActiveBoard()))
 
     var currentPlayer player.Player
     if state.GetCurrentPlayer() == game.X {
@@ -51,7 +49,7 @@ func main() {
   }
 
   fmt.Println()
-  fmt.Println(state.GetBoard().ToString(nil))
+  fmt.Println(state.GetSuperBoard().ToString(nil))
   fmt.Println()
 
   switch (winner) {
