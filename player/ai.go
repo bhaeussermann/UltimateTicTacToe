@@ -9,7 +9,7 @@ import (
 
 type AI struct {}
 
-func (*AI) GetMove(state *game.State) (*game.Move, bool) {
+func (*AI) GetMove(state *game.State) (Action, *game.Move) {
   potentialMoves := getPotentialMoves(state)
   
   var bestMove *game.Move
@@ -25,7 +25,7 @@ func (*AI) GetMove(state *game.State) (*game.Move, bool) {
     }
   }
 
-  return bestMove, true
+  return Action_Move, bestMove
 }
 
 func getPotentialMoves(state *game.State) []game.Move {
@@ -53,7 +53,7 @@ func getPotentialMoveLocations(cellGrid game.CellGrid, player game.Player) []loc
 
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if cellGrid.GetCell(rowNumber, columnNumber) == game.None {
+      if cellGrid.GetCell(rowNumber, columnNumber) == game.Cell_None {
         location := location{rowNumber: rowNumber, columnNumber: columnNumber}
         if !slices.Contains(potentialMoveLocations, location) {
           potentialMoveLocations = append(potentialMoveLocations, location)
@@ -71,7 +71,7 @@ func getScore(state *game.State, me game.Player) int {
   }
 
   var opponent game.Player
-  if me == game.X { opponent = game.O } else { opponent = game.X }
+  if me == game.Cell_X { opponent = game.Cell_O } else { opponent = game.Cell_X }
 
   opponentMoveBoardReference := getMoveBoard(state)
   opponentCellGrid := state.GetBoard(opponentMoveBoardReference).Cells
@@ -118,9 +118,9 @@ func getMoveBoard(state *game.State) *game.BoardReference {
 
 func getMoveLocations(cellGrid game.CellGrid, me game.Player) []location {
   var opponent game.Player
-  if me == game.X { opponent = game.O } else { opponent = game.X }
+  if me == game.Cell_X { opponent = game.Cell_O } else { opponent = game.Cell_X }
   
-  if cellGrid.GetCell(1, 1) == game.None {
+  if cellGrid.GetCell(1, 1) == game.Cell_None {
     return []location { location { rowNumber: 1, columnNumber: 1 } }
   }
 
@@ -194,7 +194,7 @@ func getLocations(cellGrid game.CellGrid) []location {
   var locations []location
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if cellGrid.GetCell(rowNumber, columnNumber) == game.None {
+      if cellGrid.GetCell(rowNumber, columnNumber) == game.Cell_None {
         locations = append(locations, location { rowNumber: rowNumber, columnNumber: columnNumber })
       }
     }
@@ -217,7 +217,7 @@ func getCombinedNoneLocations(lines []line, cellGrid game.CellGrid) []location {
 func (line *line) getNoneLocations(cellGrid game.CellGrid) []location {
   var noneLocations []location
   for _, location := range line.locations {
-    if cellGrid.GetCell(location.rowNumber, location.columnNumber) == game.None {
+    if cellGrid.GetCell(location.rowNumber, location.columnNumber) == game.Cell_None {
       noneLocations = append(noneLocations, location)
     }
   }
@@ -250,7 +250,7 @@ func getOpenLines(cellGrid game.CellGrid, player game.Player, targetPlayerCount 
     for _, location := range line.locations {
       switch game.Player(cellGrid.GetCell(location.rowNumber, location.columnNumber)) {
       case player: playerCount++
-      case game.None: 
+      case game.Cell_None: 
       default: hasOpponent = true
       }
     }

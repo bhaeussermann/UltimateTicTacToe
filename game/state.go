@@ -18,8 +18,8 @@ type Move struct {
 
 func CreateState() *State {
   return &State {
-    currentPlayer: X,
-    winner: None,
+    currentPlayer: Cell_X,
+    winner: Cell_None,
   }
 }
 
@@ -63,7 +63,7 @@ func (state *State) CanPlace(move *Move) bool {
   }
   
   board := state.getBoard(move)
-  return !board.Done && board.Cells[move.RowNumber][move.ColumnNumber] == None
+  return !board.Done && board.Cells[move.RowNumber][move.ColumnNumber] == Cell_None
 }
 
 func (state *State) Place(move *Move) bool {
@@ -82,10 +82,10 @@ func (state *State) Place(move *Move) bool {
     state.activeBoard = &BoardReference{ RowNumber: move.RowNumber, ColumnNumber: move.ColumnNumber }
   }
 
-  if state.currentPlayer == X {
-    state.currentPlayer = O
+  if state.currentPlayer == Cell_X {
+    state.currentPlayer = Cell_O
   } else {
-    state.currentPlayer = X
+    state.currentPlayer = Cell_X
   }
   return true
 }
@@ -97,27 +97,27 @@ func (state *State) getBoard(move *Move) *Board {
 }
 
 func (board *Board) updateBoardOwner() {
-  if hasAnyLineFilled(board.Cells, X) {
+  if hasAnyLineFilled(board.Cells, Cell_X) {
     board.Done = true
-    board.Owner = X
+    board.Owner = Cell_X
   }
-  if hasAnyLineFilled(board.Cells, O) {
+  if hasAnyLineFilled(board.Cells, Cell_O) {
     board.Done = true
-    board.Owner = O
+    board.Owner = Cell_O
   }
   if !hasEmptyCell(board.Cells) {
     board.Done = true
-    board.Owner = None
+    board.Owner = Cell_None
   }
 }
 
 func (state *State) updateWinState() {
-  if hasAnyLineFilled(state.superBoard, X) {
-    state.winner = X
+  if hasAnyLineFilled(state.superBoard, Cell_X) {
+    state.winner = Cell_X
     state.done = true
   }
-  if hasAnyLineFilled(state.superBoard, O) {
-    state.winner = O
+  if hasAnyLineFilled(state.superBoard, Cell_O) {
+    state.winner = Cell_O
     state.done = true
   }
   if !hasEmptyCell(state.superBoard) {
@@ -186,7 +186,7 @@ func hasDiagonal2Filled(cellGrid CellGrid, player Player) bool {
 func hasEmptyCell(cellGrid CellGrid) bool {
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if cellGrid.GetCell(rowNumber, columnNumber) == None {
+      if cellGrid.GetCell(rowNumber, columnNumber) == Cell_None {
         return true;
       }
     }

@@ -19,7 +19,7 @@ func main() {
     return
   }
   var playerX, playerO player.Player
-  if playerSelection == game.X {
+  if playerSelection == game.Cell_X {
      playerX = &player.Keyboard{}
      playerO = &player.AI{}
   } else {
@@ -29,6 +29,9 @@ func main() {
 
   printInstructions()
   state := game.CreateState()
+  undoStates := []*game.State { }
+  redoStates := []*game.State { }
+
   var done bool
   var winner game.Player
   for ; !done; done, winner = state.GetWinState() {
@@ -36,16 +39,40 @@ func main() {
     fmt.Println(state.GetSuperBoard().ToString(state.GetActiveBoard()))
 
     var currentPlayer player.Player
-    if state.GetCurrentPlayer() == game.X {
+    if state.GetCurrentPlayer() == game.Cell_X {
       currentPlayer = playerX
     } else {
       currentPlayer = playerO
     }
-    move, shouldContinue := currentPlayer.GetMove(state)
-    if !shouldContinue {
+    action, move := currentPlayer.GetMove(state)
+    switch action {
+    case player.Action_Terminate:
       return
+    case player.Action_Undo:
+      if len(undoStates) == 0 {
+        beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+      } else {
+        redoStates = append(redoStates, state)
+        state = undoStates[len(undoStates) - 1]
+        undoStates = undoStates[:len(undoStates) - 1]
+      }
+    case player.Action_Redo: {
+      if len(redoStates) == 0 {
+        beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+      } else {
+        undoStates = append(undoStates, state)
+        state = redoStates[len(redoStates) - 1]
+        redoStates = redoStates[:len(redoStates) - 1]
+      }
     }
-    state.Place(move)
+    case player.Action_Move:
+      isKeyboardPlayer := state.GetCurrentPlayer() == playerSelection
+      if isKeyboardPlayer {
+        undoStates = append(undoStates, state.Copy())
+        redoStates = redoStates[0:0]
+      }
+      state.Place(move)
+    }
   }
 
   fmt.Println()
@@ -53,8 +80,8 @@ func main() {
   fmt.Println()
 
   switch (winner) {
-  case game.X: fmt.Println("Cross is the winner!")
-  case game.O: fmt.Println("Naughts is the winner!")
+  case game.Cell_X: fmt.Println("Cross is the winner!")
+  case game.Cell_O: fmt.Println("Naughts is the winner!")
   default: fmt.Println("It's a tie.")
   }
 }
@@ -73,7 +100,7 @@ func getPlayerSelection() (game.Player, bool) {
   oldState, error := term.MakeRaw(int(os.Stdin.Fd()))
   if error != nil {
     fmt.Println(error)
-    return game.None, false
+    return game.Cell_None, false
   }
   defer term.Restore(int(os.Stdin.Fd()), oldState)
 
@@ -81,11 +108,11 @@ func getPlayerSelection() (game.Player, bool) {
   for true {
     os.Stdin.Read(readBuffer)
     switch readBuffer[0] {
-    case 27: return game.None, false
-    case byte('x'), byte('X'): return game.X, true
-    case byte('o'), byte('O'): return game.O, true
+    case 27: return game.Cell_None, false
+    case byte('x'), byte('X'): return game.Cell_X, true
+    case byte('o'), byte('O'): return game.Cell_O, true
     default: beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
     }
   }
-  return game.None, false
+  return game.Cell_None, false
 }

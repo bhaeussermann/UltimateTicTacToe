@@ -20,9 +20,9 @@ type BoardCells [Size][Size]Cell
 type Cell byte
 
 const (
-  None = iota
-  X
-  O
+  Cell_None = iota
+  Cell_X
+  Cell_O
 )
 
 type CellGrid interface {
@@ -75,17 +75,17 @@ func (superBoard *SuperBoard) ToString(activeBoard *BoardReference) string {
           boardAsString += " "
         }
         if board.Done {
-          if board.Owner == X {
+          if board.Owner == Cell_X {
             if rowIndex == 0 { boardAsString += "   ╲   ╱  " }
             if rowIndex == 1 { boardAsString += "     ╳    " }
             if rowIndex == 2 { boardAsString += "   ╱   ╲  " }
           }
-          if board.Owner == O {
+          if board.Owner == Cell_O {
             if rowIndex == 0 { boardAsString += "  ╭─────╮ " }
             if rowIndex == 1 { boardAsString += "  │     │ " }
             if rowIndex == 2 { boardAsString += "  ╰─────╯ " }
           }
-          if board.Owner == None {
+          if board.Owner == Cell_None {
             if rowIndex == 0 { boardAsString += "          " }
             if rowIndex == 1 { boardAsString += "  ──────  " }
             if rowIndex == 2 { boardAsString += "          " }
@@ -116,15 +116,15 @@ func (superBoard *SuperBoard) ToString(activeBoard *BoardReference) string {
             boardAsString += " "
           }
           if board.Done {
-            if board.Owner == X {
+            if board.Owner == Cell_X {
               if rowIndex == 0 { boardAsString += "    ╲ ╱    " }
               if rowIndex == 1 { boardAsString += "    ╱ ╲    " }
             }
-            if board.Owner == O {
+            if board.Owner == Cell_O {
               if rowIndex == 0 { boardAsString += "  │     │  " }
               if rowIndex == 1 { boardAsString += "  │     │  " }
             }
-            if board.Owner == None {
+            if board.Owner == Cell_None {
               boardAsString += "          "
             }
           } else {
@@ -201,9 +201,9 @@ func repeat(character string, length int) string {
 
 func (cell Cell) toString() string {
   switch cell {
-  case None: return " "
-  case X: return "X"
-  case O: return "O"
+  case Cell_None: return " "
+  case Cell_X: return "X"
+  case Cell_O: return "O"
   }
   return ""
 }
