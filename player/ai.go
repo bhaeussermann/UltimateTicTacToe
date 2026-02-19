@@ -64,10 +64,16 @@ func getPotentialMoveLocations(cellGrid game.CellGrid, player game.Player) []loc
   return potentialMoveLocations
 }
 
+const ForkLocationScore = 1
+const WinLocationScore = 2
+const BoardScore = 5
+const SuperBoardMultiplier = game.Size * game.Size
+const GameScore = BoardScore * SuperBoardMultiplier
+
 func getScore(state *game.State, me game.Player) int {
   done, winner := state.GetWinState()
   if (done) {
-    if (winner == me) { return game.Size * game.Size * 9 + 1 } else { return game.Size * game.Size * -9 - 1 }
+    if (winner == me) { return GameScore } else { return -GameScore }
   }
 
   var opponent game.Player
@@ -80,15 +86,15 @@ func getScore(state *game.State, me game.Player) int {
 
   done, winner = state.GetWinState()
   if (done) {
-    if (winner == me) { return game.Size * game.Size * 9 } else { return game.Size * game.Size * -9 }
+    if (winner == me) { return GameScore - 1 } else { return -(GameScore - 1) }
   }
 
-  score := (getCellGridScore(state.GetSuperBoard(), me) - getCellGridScore(state.GetSuperBoard(), opponent)) * game.Size * game.Size * 3
+  score := (getCellGridScore(state.GetSuperBoard(), me) - getCellGridScore(state.GetSuperBoard(), opponent)) * SuperBoardMultiplier
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
       board := state.GetBoard(&game.BoardReference{RowNumber: rowNumber, ColumnNumber: columnNumber})
       if board.Done {
-        if int(board.Owner) == int(me) { score += 3 } else { score -= 3 }
+        if int(board.Owner) == int(me) { score += BoardScore } else { score -= BoardScore }
       } else {
         score += getCellGridScore(board.Cells, me) - getCellGridScore(board.Cells, opponent)
       }
@@ -99,10 +105,10 @@ func getScore(state *game.State, me game.Player) int {
 
 func getCellGridScore(cellGrid game.CellGrid, player game.Player) int {
  if len(getWinLocations(cellGrid, player)) != 0 {
-  return 2
+  return WinLocationScore
  }
  if len(getForkLocations(cellGrid, player)) != 0 {
-  return 1
+  return ForkLocationScore
  }
  return 0
 }
@@ -119,10 +125,6 @@ func getMoveBoard(state *game.State) *game.BoardReference {
 func getMoveLocations(cellGrid game.CellGrid, me game.Player) []location {
   var opponent game.Player
   if me == game.Cell_X { opponent = game.Cell_O } else { opponent = game.Cell_X }
-  
-  if cellGrid.GetCell(1, 1) == game.Cell_None {
-    return []location { location { rowNumber: 1, columnNumber: 1 } }
-  }
 
   winLocations := getWinLocations(cellGrid, me)
   if len(winLocations) != 0 {
@@ -147,6 +149,10 @@ func getMoveLocations(cellGrid game.CellGrid, me game.Player) []location {
   locationThatAvoidsForkLocations := getLocationsOfLineExcludingLocations(cellGrid, me, opponentForkLocations)
   if len(locationThatAvoidsForkLocations) != 0 {
     return locationThatAvoidsForkLocations
+  }
+  
+  if cellGrid.GetCell(1, 1) == game.Cell_None {
+    return []location { location { rowNumber: 1, columnNumber: 1 } }
   }
 
   return getLocations(cellGrid)

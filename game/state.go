@@ -54,7 +54,10 @@ func (state *State) GetWinState() (bool, Player) {
 }
 
 func (state *State) CanPlaceIn(boardReference *BoardReference) bool {
-  return state.activeBoard == nil || &state.activeBoard == &boardReference
+  if (state.activeBoard == nil) {
+    return !state.GetBoard(boardReference).Done
+  }
+  return &state.activeBoard == &boardReference
 }
 
 func (state *State) CanPlace(move *Move) bool {
@@ -186,7 +189,7 @@ func hasDiagonal2Filled(cellGrid CellGrid, player Player) bool {
 func hasEmptyCell(cellGrid CellGrid) bool {
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if cellGrid.GetCell(rowNumber, columnNumber) == Cell_None {
+      if cellGrid.IsEmpty(rowNumber, columnNumber) {
         return true;
       }
     }

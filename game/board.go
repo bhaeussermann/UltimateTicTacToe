@@ -27,6 +27,7 @@ const (
 
 type CellGrid interface {
   GetCell(rowNumber byte, columnNumber byte) Cell
+  IsEmpty(rowNumber byte, columnNumber byte) bool
 }
 
 func (superBoard SuperBoard) Copy() *SuperBoard {
@@ -51,8 +52,20 @@ func (superBoard SuperBoard) GetCell(rowNumber byte, columnNumber byte) Cell {
   return superBoard[rowNumber][columnNumber].Owner
 }
 
+func (superBoard SuperBoard) IsEmpty(rowNumber byte, columnNumber byte) bool {
+  return !superBoard[rowNumber][columnNumber].Done
+}
+
 func (boardCells BoardCells) GetCell(rowNumber byte, columnNumber byte) Cell {
   return boardCells[rowNumber][columnNumber]
+}
+
+func (boardCells BoardCells) IsEmpty(rowNumber byte, columnNumber byte) bool {
+  return boardCells[rowNumber][columnNumber] == Cell_None
+}
+
+func (superBoard *SuperBoard) GetHorizontalLine() string {
+  return repeat("═", Size * (Size * 4 + 2))
 }
 
 func (superBoard *SuperBoard) ToString(activeBoard *BoardReference) string {
@@ -125,7 +138,7 @@ func (superBoard *SuperBoard) ToString(activeBoard *BoardReference) string {
               if rowIndex == 1 { boardAsString += "  │     │  " }
             }
             if board.Owner == Cell_None {
-              boardAsString += "          "
+              boardAsString += "           "
             }
           } else {
             for cellIndex := 0; cellIndex < Size; cellIndex++ {

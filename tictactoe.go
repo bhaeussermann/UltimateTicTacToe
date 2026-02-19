@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-  fmt.Println("=== Super Tic Tac Toe ===")
+  fmt.Println("═══ Super Tic Tac Toe ═══")
   fmt.Println()
   fmt.Println("Would you like to play as X or O?")
   playerSelection, didSelect := getPlayerSelection()
@@ -35,6 +35,8 @@ func main() {
   var done bool
   var winner game.Player
   for ; !done; done, winner = state.GetWinState() {
+    fmt.Println()
+    fmt.Println(state.GetSuperBoard().GetHorizontalLine())
     fmt.Println()
     fmt.Println(state.GetSuperBoard().ToString(state.GetActiveBoard()))
 
@@ -87,6 +89,7 @@ func main() {
 }
 
 func printInstructions() {
+  fmt.Println()
   fmt.Println("Type one of the following to place at the corresponding position (Esc to quit):")
   fmt.Println()
   fmt.Println(" 1 │ 2 │ 3")
