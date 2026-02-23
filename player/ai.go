@@ -30,13 +30,13 @@ func getBestMove(state *game.State, depth int) (*game.Move, int) {
 
     _, opponentScore := getBestMove(nextState, depth - 1)
     score := -opponentScore
-    if (score > bestMoveScore) {
+    if score > bestMoveScore {
       bestMove = &potentialMove
       bestMoveScore = score
     }
   }
 
-  return bestMove, bestMoveScore - 1
+  return bestMove, bestMoveScore
 }
 
 func getPotentialMoves(state *game.State) []game.Move {
@@ -264,15 +264,15 @@ func getOpenLines(cellGrid game.CellGrid, player game.Player, targetPlayerCount 
   var lines []line
   for _, line := range allLines {
     var playerCount byte
-    var hasOpponent bool
+    var isBlocked bool
     for _, location := range line.locations {
       switch game.Player(cellGrid.GetCell(location.rowNumber, location.columnNumber)) {
       case player: playerCount++
-      case game.Cell_None: 
-      default: hasOpponent = true
+      case game.Cell_None: isBlocked = isBlocked || !cellGrid.IsEmpty(location.rowNumber, location.columnNumber)
+      default: isBlocked = true
       }
     }
-    if !hasOpponent && (playerCount >= targetPlayerCount) {
+    if !isBlocked && (playerCount >= targetPlayerCount) {
       lines = append(lines, line)
     }
   }
