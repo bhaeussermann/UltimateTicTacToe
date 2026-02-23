@@ -10,6 +10,16 @@ import (
 type AI struct {}
 
 func (*AI) GetMove(state *game.State) (Action, *game.Move) {
+  move, _ := getBestMove(state, 4)
+  return Action_Move, move
+}
+
+func getBestMove(state *game.State, depth int) (*game.Move, int) {
+  done, _ := state.GetWinState()
+  if depth <= 0 || done {
+    return nil, getScore(state)
+  }
+
   potentialMoves := getPotentialMoves(state)
   
   var bestMove *game.Move
@@ -18,14 +28,15 @@ func (*AI) GetMove(state *game.State) (Action, *game.Move) {
     nextState := state.Copy()
     nextState.Place(&potentialMove)
 
-    score := getScore(nextState, state.GetCurrentPlayer())
+    _, opponentScore := getBestMove(nextState, depth - 1)
+    score := -opponentScore
     if (score > bestMoveScore) {
       bestMove = &potentialMove
       bestMoveScore = score
     }
   }
 
-  return Action_Move, bestMove
+  return bestMove, bestMoveScore - 1
 }
 
 func getPotentialMoves(state *game.State) []game.Move {
@@ -70,14 +81,15 @@ const BoardScore = 5
 const SuperBoardMultiplier = game.Size * game.Size
 const GameScore = BoardScore * SuperBoardMultiplier
 
-func getScore(state *game.State, me game.Player) int {
+func getScore(state *game.State) int {
+  currentPlayer := state.GetCurrentPlayer()
   done, winner := state.GetWinState()
   if (done) {
-    if (winner == me) { return GameScore } else { return -GameScore }
+    if (winner == currentPlayer) { return GameScore } else { return -GameScore }
   }
 
   var opponent game.Player
-  if me == game.Cell_X { opponent = game.Cell_O } else { opponent = game.Cell_X }
+  if currentPlayer == game.Cell_X { opponent = game.Cell_O } else { opponent = game.Cell_X }
 
   opponentMoveBoardReference := getMoveBoard(state)
   opponentCellGrid := state.GetBoard(opponentMoveBoardReference).Cells
@@ -86,17 +98,17 @@ func getScore(state *game.State, me game.Player) int {
 
   done, winner = state.GetWinState()
   if (done) {
-    if (winner == me) { return GameScore - 1 } else { return -(GameScore - 1) }
+    if (winner == currentPlayer) { return GameScore - 1 } else { return -(GameScore - 1) }
   }
 
-  score := (getCellGridScore(state.GetSuperBoard(), me) - getCellGridScore(state.GetSuperBoard(), opponent)) * SuperBoardMultiplier
+  score := (getCellGridScore(state.GetSuperBoard(), currentPlayer) - getCellGridScore(state.GetSuperBoard(), opponent)) * SuperBoardMultiplier
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
       board := state.GetBoard(&game.BoardReference{RowNumber: rowNumber, ColumnNumber: columnNumber})
       if board.Done {
-        if int(board.Owner) == int(me) { score += BoardScore } else { score -= BoardScore }
+        if int(board.Owner) == int(currentPlayer) { score += BoardScore } else { score -= BoardScore }
       } else {
-        score += getCellGridScore(board.Cells, me) - getCellGridScore(board.Cells, opponent)
+        score += getCellGridScore(board.Cells, currentPlayer) - getCellGridScore(board.Cells, opponent)
       }
     }
   }
@@ -163,7 +175,7 @@ func getWinLocations(cellGrid game.CellGrid, player game.Player) []location {
   if len(winLines) == 0 {
     return []location {}
   }
-  return getCombinedNoneLocations(winLines, cellGrid)
+  return getCombinedEmptyLocations(winLines, cellGrid)
 }
 
 func getForkLocations(cellGrid game.CellGrid, player game.Player) []location {
@@ -171,7 +183,7 @@ func getForkLocations(cellGrid game.CellGrid, player game.Player) []location {
   var forkLocations []location
   var noneLocations []location
   for _, line := range openLines {
-    for _, noneLocationInLine := range line.getNoneLocations(cellGrid) {
+    for _, noneLocationInLine := range line.getEmptyLocations(cellGrid) {
       if slices.Contains(noneLocations, noneLocationInLine) {
         forkLocations = append(forkLocations, noneLocationInLine)
       }
@@ -186,7 +198,7 @@ func getLocationsOfLineExcludingLocations(cellGrid game.CellGrid, player game.Pl
   openLines := getOpenLines(cellGrid, player, 1)
   for _, line := range openLines {
     if !line.containsAny(excludeLocations) {
-      for _, location := range line.getNoneLocations(cellGrid) {
+      for _, location := range line.getEmptyLocations(cellGrid) {
         if !slices.Contains(locations, location) {
           locations = append(locations, location)
         }
@@ -208,10 +220,10 @@ func getLocations(cellGrid game.CellGrid) []location {
   return locations
 }
 
-func getCombinedNoneLocations(lines []line, cellGrid game.CellGrid) []location {
+func getCombinedEmptyLocations(lines []line, cellGrid game.CellGrid) []location {
   var noneLocations []location
   for _, line := range lines {
-    for _, location := range line.getNoneLocations(cellGrid) {
+    for _, location := range line.getEmptyLocations(cellGrid) {
       if (!slices.Contains(noneLocations, location)) {
         noneLocations = append(noneLocations, location)
       }
@@ -220,10 +232,10 @@ func getCombinedNoneLocations(lines []line, cellGrid game.CellGrid) []location {
   return noneLocations
 }
 
-func (line *line) getNoneLocations(cellGrid game.CellGrid) []location {
+func (line *line) getEmptyLocations(cellGrid game.CellGrid) []location {
   var noneLocations []location
   for _, location := range line.locations {
-    if cellGrid.GetCell(location.rowNumber, location.columnNumber) == game.Cell_None {
+    if cellGrid.IsEmpty(location.rowNumber, location.columnNumber) {
       noneLocations = append(noneLocations, location)
     }
   }
