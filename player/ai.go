@@ -10,11 +10,11 @@ import (
 type AI struct {}
 
 func (*AI) GetMove(state *game.State) (Action, *game.Move) {
-  move, _ := getBestMove(state, 4)
+  move, _ := getBestMove(state, 6, math.MinInt, math.MaxInt)
   return Action_Move, move
 }
 
-func getBestMove(state *game.State, depth int) (*game.Move, int) {
+func getBestMove(state *game.State, depth int, alpha int, beta int) (*game.Move, int) {
   done, _ := state.GetWinState()
   if depth <= 0 || done {
     return nil, getScore(state)
@@ -28,11 +28,17 @@ func getBestMove(state *game.State, depth int) (*game.Move, int) {
     nextState := state.Copy()
     nextState.Place(&potentialMove)
 
-    _, opponentScore := getBestMove(nextState, depth - 1)
+    _, opponentScore := getBestMove(nextState, depth - 1, -beta, -alpha)
     score := -opponentScore
     if score > bestMoveScore {
       bestMove = &potentialMove
       bestMoveScore = score
+      if bestMoveScore >= beta {
+        return bestMove, bestMoveScore
+      }
+      if bestMoveScore > alpha {
+        alpha = bestMoveScore
+      }
     }
   }
 
@@ -64,7 +70,7 @@ func getPotentialMoveLocations(cellGrid game.CellGrid, player game.Player) []loc
 
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if cellGrid.GetCell(rowNumber, columnNumber) == game.Cell_None {
+      if cellGrid.IsEmpty(rowNumber, columnNumber) {
         location := location{rowNumber: rowNumber, columnNumber: columnNumber}
         if !slices.Contains(potentialMoveLocations, location) {
           potentialMoveLocations = append(potentialMoveLocations, location)
@@ -163,7 +169,7 @@ func getMoveLocations(cellGrid game.CellGrid, me game.Player) []location {
     return locationThatAvoidsForkLocations
   }
   
-  if cellGrid.GetCell(1, 1) == game.Cell_None {
+  if cellGrid.IsEmpty(1, 1) {
     return []location { location { rowNumber: 1, columnNumber: 1 } }
   }
 
@@ -212,7 +218,7 @@ func getLocations(cellGrid game.CellGrid) []location {
   var locations []location
   for _, rowNumber := range sideNumbers {
     for _, columnNumber := range sideNumbers {
-      if cellGrid.GetCell(rowNumber, columnNumber) == game.Cell_None {
+      if cellGrid.IsEmpty(rowNumber, columnNumber) {
         locations = append(locations, location { rowNumber: rowNumber, columnNumber: columnNumber })
       }
     }
@@ -221,25 +227,25 @@ func getLocations(cellGrid game.CellGrid) []location {
 }
 
 func getCombinedEmptyLocations(lines []line, cellGrid game.CellGrid) []location {
-  var noneLocations []location
+  var emptyLocations []location
   for _, line := range lines {
     for _, location := range line.getEmptyLocations(cellGrid) {
-      if (!slices.Contains(noneLocations, location)) {
-        noneLocations = append(noneLocations, location)
+      if (!slices.Contains(emptyLocations, location)) {
+        emptyLocations = append(emptyLocations, location)
       }
     }
   }
-  return noneLocations
+  return emptyLocations
 }
 
 func (line *line) getEmptyLocations(cellGrid game.CellGrid) []location {
-  var noneLocations []location
+  var emptyLocations []location
   for _, location := range line.locations {
     if cellGrid.IsEmpty(location.rowNumber, location.columnNumber) {
-      noneLocations = append(noneLocations, location)
+      emptyLocations = append(emptyLocations, location)
     }
   }
-  return noneLocations
+  return emptyLocations
 }
 
 func (line *line) containsAny(locations []location) bool {
