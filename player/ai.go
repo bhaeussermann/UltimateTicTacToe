@@ -7,15 +7,35 @@ import (
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
 )
 
-type AI struct {}
+type AiDifficulty byte
 
-func (*AI) GetMove(state *game.State) (Action, *game.Move) {
+const (
+  AiDifficulty_Easy = iota
+  AiDifficulty_Medium
+  AiDifficulty_Hard
+)
+
+type AI struct {
+  AiDifficulty AiDifficulty
+}
+
+func (ai *AI) GetMove(state *game.State) (Action, *game.Move) {
   done, _ := state.GetWinState()
   if done {
     return Action_None, nil
   }
-  move, _ := getBestMove(state, 6, math.MinInt, math.MaxInt)
+  move, _ := getBestMove(state, ai.getDepth(), math.MinInt, math.MaxInt)
   return Action_Move, move
+}
+
+func (ai *AI) getDepth() int {
+  if ai.AiDifficulty == AiDifficulty_Easy {
+    return 1
+  } else if ai.AiDifficulty == AiDifficulty_Medium {
+    return 4
+  } else {
+    return 6
+  }
 }
 
 func getBestMove(state *game.State, depth int, alpha int, beta int) (*game.Move, int) {

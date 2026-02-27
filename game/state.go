@@ -69,6 +69,14 @@ func (state *State) CanPlace(move *Move) bool {
   return !board.Done && board.Cells[move.RowNumber][move.ColumnNumber] == Cell_None
 }
 
+func (state *State) CycleCurrentPlayer() {
+  if state.currentPlayer == Cell_X {
+    state.currentPlayer = Cell_O
+  } else {
+    state.currentPlayer = Cell_X
+  }
+}
+
 func (state *State) Place(move *Move) bool {
   if !state.CanPlace(move) {
     return false
@@ -85,11 +93,8 @@ func (state *State) Place(move *Move) bool {
     state.activeBoard = &BoardReference{ RowNumber: move.RowNumber, ColumnNumber: move.ColumnNumber }
   }
 
-  if state.currentPlayer == Cell_X {
-    state.currentPlayer = Cell_O
-  } else {
-    state.currentPlayer = Cell_X
-  }
+  state.CycleCurrentPlayer()
+  
   return true
 }
 

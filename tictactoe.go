@@ -14,18 +14,16 @@ func main() {
   fmt.Println("═══ Super Tic Tac Toe ═══")
 
   for true {
-    fmt.Println()
-    fmt.Println("Would you like to play as X or O?")
-    playerSelection, didSelect := getPlayerSelection()
+    startPlayer, aiDifficulty, didSelect := getGameOptions()
     if !didSelect {
       return
     }
     var playerX, playerO player.Player
-    if playerSelection == game.Cell_X {
+    if startPlayer == game.Cell_X {
       playerX = &player.Keyboard{}
-      playerO = &player.AI{}
+      playerO = &player.AI{ AiDifficulty: aiDifficulty }
     } else {
-      playerX = &player.AI{}
+      playerX = &player.AI{ AiDifficulty: aiDifficulty }
       playerO = &player.Keyboard{}
     }
 
@@ -36,7 +34,7 @@ func main() {
 
     var gameContinuation gameContinuation
     for gameContinuation = gameContinuation_Continue; gameContinuation == gameContinuation_Continue; {
-      gameContinuation = step(&state, playerSelection, &playerX, &playerO, &undoStates, &redoStates)
+      gameContinuation = step(&state, startPlayer, &playerX, &playerO, &undoStates, &redoStates)
     }
     if gameContinuation == gameContinuation_Stop {
       return;
@@ -81,21 +79,20 @@ func step(
     return gameContinuation_Stop
   case player.Action_Undo:
     if len(*undoStates) == 0 {
-      beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+      beep()
     } else {
       *redoStates = append(*redoStates, *state)
       *state = (*undoStates)[len(*undoStates) - 1]
       *undoStates = (*undoStates)[:len(*undoStates) - 1]
     }
-  case player.Action_Redo: {
+  case player.Action_Redo:
     if len(*redoStates) == 0 {
-      beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+      beep()
     } else {
       *undoStates = append(*undoStates, *state)
       *state = (*redoStates)[len(*redoStates) - 1]
       *redoStates = (*redoStates)[:len(*redoStates) - 1]
     }
-  }
   case player.Action_Move:
     isKeyboardPlayer := (*state).GetCurrentPlayer() == playerSelection
     if isKeyboardPlayer {
@@ -103,6 +100,8 @@ func step(
       *redoStates = (*redoStates)[0:0]
     }
     (*state).Place(move)
+  case player.Action_None:
+    (*state).CycleCurrentPlayer()
   }
 
   if action != player.Action_None {
@@ -127,32 +126,81 @@ func step(
 func printInstructions() {
   fmt.Println()
   fmt.Println("Type one of the following to place at the corresponding position:")
-  fmt.Println("(Esc to quit; 'R' to reset)")
   fmt.Println()
   fmt.Println(" 1 │ 2 │ 3")
   fmt.Println("───┼───┼──")
   fmt.Println(" 4 │ 5 │ 6")
   fmt.Println("───┼───┼──")
   fmt.Println(" 7 │ 8 │ 9")
+  fmt.Println()
+  fmt.Println("• Esc to quit")
+  fmt.Println("• 'R' to reset")
 }
 
-func getPlayerSelection() (game.Player, bool) {
+func getGameOptions() (game.Player, player.AiDifficulty, bool) {
+  var playerSelection game.Player = game.Cell_X
+  var aiDifficulty player.AiDifficulty = player.AiDifficulty_Easy
+
+  fmt.Println()
+  printGameSelection(playerSelection, aiDifficulty)
+  fmt.Println("ENTER to start. Esc to quit.")
+
+  for true {
+    key, error := readKey()
+    if error != nil {
+      fmt.Println(error)
+      return 0, 0, false
+    }
+
+    if key == '1' {
+      if playerSelection == game.Cell_X { playerSelection = game.Cell_O } else { playerSelection = game.Cell_X }
+    } else if key == '2' {
+      if aiDifficulty == player.AiDifficulty_Easy {
+        aiDifficulty = player.AiDifficulty_Medium
+      } else if aiDifficulty == player.AiDifficulty_Medium {
+        aiDifficulty = player.AiDifficulty_Hard
+      } else {
+        aiDifficulty = player.AiDifficulty_Easy
+      }
+    } else if key == 27 { // Escape
+      return 0, 0, false
+    } else if key == 13 { // Enter
+      return playerSelection, aiDifficulty, true
+    } else {
+      beep()
+    }
+
+    fmt.Println()
+    printGameSelection(playerSelection, aiDifficulty)
+  }
+  return 0, 0, false
+}
+
+func printGameSelection(selectedPlayer game.Player, aiDifficulty player.AiDifficulty) {
+  fmt.Print("(1) Player selection: ")
+  if selectedPlayer == game.Cell_X { fmt.Println("X") } else { fmt.Println("O") }
+
+  fmt.Print("(2) AI difficulty: ")
+  if aiDifficulty == player.AiDifficulty_Easy {
+    fmt.Println("Easy")
+  } else if aiDifficulty == player.AiDifficulty_Medium {
+    fmt.Println("Medium")
+  } else {
+    fmt.Println("Hard")
+  }
+}
+
+func readKey() (byte, error) {
   oldState, error := term.MakeRaw(int(os.Stdin.Fd()))
   if error != nil {
-    fmt.Println(error)
-    return game.Cell_None, false
+    return 0, error
   }
   defer term.Restore(int(os.Stdin.Fd()), oldState)
-
   readBuffer := make([]byte, 1)
-  for true {
-    os.Stdin.Read(readBuffer)
-    switch readBuffer[0] {
-    case 27: return game.Cell_None, false
-    case byte('x'), byte('X'): return game.Cell_X, true
-    case byte('o'), byte('O'): return game.Cell_O, true
-    default: beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
-    }
-  }
-  return game.Cell_None, false
+  os.Stdin.Read(readBuffer)
+  return readBuffer[0], nil
+}
+
+func beep() {
+  beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
 }
