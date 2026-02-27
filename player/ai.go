@@ -10,6 +10,10 @@ import (
 type AI struct {}
 
 func (*AI) GetMove(state *game.State) (Action, *game.Move) {
+  done, _ := state.GetWinState()
+  if done {
+    return Action_None, nil
+  }
   move, _ := getBestMove(state, 6, math.MinInt, math.MaxInt)
   return Action_Move, move
 }

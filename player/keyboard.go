@@ -12,6 +12,29 @@ import (
 type Keyboard struct {}
 
 func (*Keyboard) GetMove(state *game.State) (Action, *game.Move) {
+  done, _ := state.GetWinState()
+
+  if done {
+    fmt.Print("Play again? (Y / N) ")
+    for true {
+      key, error := readKey()
+      if error != nil {
+        fmt.Println(error)
+        return Action_Terminate, nil
+      }
+      if (key == byte('y')) || (key == byte('Y')) || (key == byte('r') || (key == byte('R'))) {
+        return Action_Restart, nil
+      }
+      if (key == byte('n')) || (key == byte('N')) || (key == 27) /* Escape */ {
+        return Action_Terminate, nil
+      }
+      if key == 26 { // Ctrl + Z
+        return Action_Undo, nil
+      }
+      beep()
+    }
+  }
+
   fmt.Println()
   if state.GetCurrentPlayer() == game.Cell_X {
     fmt.Print("Cross' turn to move: ")
@@ -41,41 +64,56 @@ func (*Keyboard) GetMove(state *game.State) (Action, *game.Move) {
 }
 
 func getCellReference(canPlace func(*cellReference) bool) (Action, *cellReference) {  
-  oldState, error := term.MakeRaw(int(os.Stdin.Fd()))
-  if error != nil {
-    fmt.Println(error)
-    return Action_Terminate, nil
-  }
-  defer term.Restore(int(os.Stdin.Fd()), oldState)
-  
-  readBuffer := make([]byte, 1)
   for true {
-    os.Stdin.Read(readBuffer)
-    if readBuffer[0] == 25 { // Ctrl + Y
-      return Action_Redo, nil
-    }
-    if readBuffer[0] == 26 { // Ctrl + Z
-      return Action_Undo, nil
-    }
-    if readBuffer[0] == 27 { // Escape
+    key, error := readKey()
+    if error != nil {
+      fmt.Println(error)
       return Action_Terminate, nil
     }
+
+    if key == 25 { // Ctrl + Y
+      return Action_Redo, nil
+    }
+    if key == 26 { // Ctrl + Z
+      return Action_Undo, nil
+    }
+    if key == 27 { // Escape
+      return Action_Terminate, nil
+    }
+    if (key == byte('r') || (key == byte('R'))) {
+      return Action_Restart, nil
+    }
     
-    if (readBuffer[0] >= byte('1')) && (readBuffer[0] <= byte('9')) {
-      blockNumber := byte(readBuffer[0]) - byte('1')
+    if (key >= byte('1')) && (key <= byte('9')) {
+      blockNumber := byte(key) - byte('1')
       cellReference := cellReference { rowNumber: blockNumber / 3, columnNumber: blockNumber % 3 }
       if canPlace(&cellReference) {
         fmt.Print(blockNumber + 1)
         fmt.Print("\r\n")
         return Action_Move, &cellReference
       } else {
-        beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+        beep()
       }
     } else {
-      beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+      beep()
     }
   }
   return Action_Terminate, nil
+}
+
+func readKey() (byte, error) {
+  oldState, error := term.MakeRaw(int(os.Stdin.Fd()))
+  if error != nil {
+    return 0, error
+  }
+  defer term.Restore(int(os.Stdin.Fd()), oldState)
+  readBuffer := make([]byte, 1)
+  os.Stdin.Read(readBuffer)
+  return readBuffer[0], nil
+}
+
+func beep() {
+  beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
 }
 
 type cellReference struct {

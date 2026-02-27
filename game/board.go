@@ -65,7 +65,7 @@ func (boardCells BoardCells) IsEmpty(rowNumber byte, columnNumber byte) bool {
 }
 
 func (superBoard *SuperBoard) GetHorizontalLine() string {
-  return repeat("═", Size * (Size * 4 + 2))
+  return repeat("═", Size * (Size * 4 + 2) + 3)
 }
 
 func (superBoard *SuperBoard) ToString(activeBoard *BoardReference) string {
