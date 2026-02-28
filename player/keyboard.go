@@ -86,7 +86,7 @@ func getCellReference(canPlace func(*cellReference) bool) (Action, *cellReferenc
     
     if (key >= byte('1')) && (key <= byte('9')) {
       blockNumber := byte(key) - byte('1')
-      cellReference := cellReference { rowNumber: blockNumber / 3, columnNumber: blockNumber % 3 }
+      cellReference := cellReference { rowNumber: 2 - blockNumber / 3, columnNumber: blockNumber % 3 }
       if canPlace(&cellReference) {
         fmt.Print(blockNumber + 1)
         fmt.Print("\r\n")
