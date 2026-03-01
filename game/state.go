@@ -88,7 +88,7 @@ func (state *State) Place(move *Move) bool {
   state.updateWinState()
 
   if state.superBoard[move.RowNumber][move.ColumnNumber].Done {
-    state.activeBoard = nil
+    state.activeBoard = state.getSingleEmptyBoard()
   } else {
     state.activeBoard = &BoardReference{ RowNumber: move.RowNumber, ColumnNumber: move.ColumnNumber }
   }
@@ -102,6 +102,22 @@ func (state *State) getBoard(move *Move) *Board {
   var boardReference *BoardReference
   if state.activeBoard != nil { boardReference = state.activeBoard } else { boardReference = move.Board }
   return &state.superBoard[boardReference.RowNumber][boardReference.ColumnNumber]
+}
+
+func (state *State) getSingleEmptyBoard() *BoardReference {
+  var singleEmptyBoard *BoardReference = nil
+  for _, rowNumber := range sideNumbers {
+    for _, columnNumber := range sideNumbers {
+      if !state.superBoard[rowNumber][columnNumber].Done {
+        if singleEmptyBoard == nil {
+          singleEmptyBoard = &BoardReference{ RowNumber: rowNumber, ColumnNumber: columnNumber}
+        } else {
+          return nil
+        }
+      }
+    }
+  }
+  return singleEmptyBoard
 }
 
 func (board *Board) updateBoardOwner() {

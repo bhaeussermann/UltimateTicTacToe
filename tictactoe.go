@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-  fmt.Println("═══ Super Tic Tac Toe ═══")
+  fmt.Println("═══ Ultimate Tic Tac Toe ═══")
 
   var startPlayer game.Player = game.Cell_X
   var aiDifficulty player.AiDifficulty = player.AiDifficulty_Easy
