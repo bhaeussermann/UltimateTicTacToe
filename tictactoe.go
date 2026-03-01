@@ -13,8 +13,11 @@ import (
 func main() {
   fmt.Println("═══ Super Tic Tac Toe ═══")
 
+  var startPlayer game.Player = game.Cell_X
+  var aiDifficulty player.AiDifficulty = player.AiDifficulty_Easy
+
   for true {
-    startPlayer, aiDifficulty, didSelect := getGameOptions()
+    didSelect := getGameOptions(&startPlayer, &aiDifficulty)
     if !didSelect {
       return
     }
@@ -137,43 +140,40 @@ func printInstructions() {
   fmt.Println("• 'R' to reset")
 }
 
-func getGameOptions() (game.Player, player.AiDifficulty, bool) {
-  var playerSelection game.Player = game.Cell_X
-  var aiDifficulty player.AiDifficulty = player.AiDifficulty_Easy
-
+func getGameOptions(playerSelection *game.Player, aiDifficulty *player.AiDifficulty) bool {
   fmt.Println()
-  printGameSelection(playerSelection, aiDifficulty)
+  printGameSelection(*playerSelection, *aiDifficulty)
   fmt.Println("ENTER to start. Esc to quit.")
 
   for true {
     key, error := readKey()
     if error != nil {
       fmt.Println(error)
-      return 0, 0, false
+      return false
     }
 
     if key == '1' {
-      if playerSelection == game.Cell_X { playerSelection = game.Cell_O } else { playerSelection = game.Cell_X }
+      if *playerSelection == game.Cell_X { *playerSelection = game.Cell_O } else { *playerSelection = game.Cell_X }
     } else if key == '2' {
-      if aiDifficulty == player.AiDifficulty_Easy {
-        aiDifficulty = player.AiDifficulty_Medium
-      } else if aiDifficulty == player.AiDifficulty_Medium {
-        aiDifficulty = player.AiDifficulty_Hard
+      if *aiDifficulty == player.AiDifficulty_Easy {
+        *aiDifficulty = player.AiDifficulty_Medium
+      } else if *aiDifficulty == player.AiDifficulty_Medium {
+        *aiDifficulty = player.AiDifficulty_Hard
       } else {
-        aiDifficulty = player.AiDifficulty_Easy
+        *aiDifficulty = player.AiDifficulty_Easy
       }
     } else if key == 27 { // Escape
-      return 0, 0, false
+      return false
     } else if key == 13 { // Enter
-      return playerSelection, aiDifficulty, true
+      return true
     } else {
       beep()
     }
 
     fmt.Println()
-    printGameSelection(playerSelection, aiDifficulty)
+    printGameSelection(*playerSelection, *aiDifficulty)
   }
-  return 0, 0, false
+  return false
 }
 
 func printGameSelection(selectedPlayer game.Player, aiDifficulty player.AiDifficulty) {
