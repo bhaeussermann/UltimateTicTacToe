@@ -1,17 +1,18 @@
-package player
+package keyboard
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player"
 	"github.com/gen2brain/beeep"
 	"golang.org/x/term"
 )
 
-type Keyboard struct {}
+type Player struct {}
 
-func (*Keyboard) GetMove(state *game.State) (Action, *game.Move) {
+func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
 
   if done {
@@ -20,16 +21,16 @@ func (*Keyboard) GetMove(state *game.State) (Action, *game.Move) {
       key, error := readKey()
       if error != nil {
         fmt.Println(error)
-        return Action_Terminate, nil
+        return player.Action_Terminate, nil
       }
       if (key == byte('y')) || (key == byte('Y')) || (key == byte('r') || (key == byte('R'))) {
-        return Action_Restart, nil
+        return player.Action_Restart, nil
       }
       if (key == byte('n')) || (key == byte('N')) || (key == 27) /* Escape */ {
-        return Action_Terminate, nil
+        return player.Action_Terminate, nil
       }
       if key == 26 { // Ctrl + Z
-        return Action_Undo, nil
+        return player.Action_Undo, nil
       }
       beep()
     }
@@ -47,7 +48,7 @@ func (*Keyboard) GetMove(state *game.State) (Action, *game.Move) {
     fmt.Print("\r\nSelect the board to play on: ")
     action, cellReference := getCellReference(
       func(c *cellReference) bool { return state.CanPlaceIn(&game.BoardReference { RowNumber: c.rowNumber, ColumnNumber: c.columnNumber })})
-    if action != Action_Move {
+    if action != player.Action_Move {
       return action, nil
     }
     boardReference = &game.BoardReference { RowNumber: cellReference.rowNumber, ColumnNumber: cellReference.columnNumber }
@@ -57,31 +58,31 @@ func (*Keyboard) GetMove(state *game.State) (Action, *game.Move) {
 
   action, cellReference := getCellReference(
     func(c *cellReference) bool { return state.CanPlace(&game.Move { Board: boardReference, RowNumber: c.rowNumber, ColumnNumber: c.columnNumber }) })
-  if action == Action_Move {
+  if action == player.Action_Move {
     return action, &game.Move { Board: boardReference, RowNumber: cellReference.rowNumber, ColumnNumber: cellReference.columnNumber }
   }
   return action, nil
 }
 
-func getCellReference(canPlace func(*cellReference) bool) (Action, *cellReference) {  
+func getCellReference(canPlace func(*cellReference) bool) (player.Action, *cellReference) {  
   for true {
     key, error := readKey()
     if error != nil {
       fmt.Println(error)
-      return Action_Terminate, nil
+      return player.Action_Terminate, nil
     }
 
     if key == 25 { // Ctrl + Y
-      return Action_Redo, nil
+      return player.Action_Redo, nil
     }
     if key == 26 { // Ctrl + Z
-      return Action_Undo, nil
+      return player.Action_Undo, nil
     }
     if key == 27 { // Escape
-      return Action_Terminate, nil
+      return player.Action_Terminate, nil
     }
     if (key == byte('r') || (key == byte('R'))) {
-      return Action_Restart, nil
+      return player.Action_Restart, nil
     }
     
     if (key >= byte('1')) && (key <= byte('9')) {
@@ -90,7 +91,7 @@ func getCellReference(canPlace func(*cellReference) bool) (Action, *cellReferenc
       if canPlace(&cellReference) {
         fmt.Print(blockNumber + 1)
         fmt.Print("\r\n")
-        return Action_Move, &cellReference
+        return player.Action_Move, &cellReference
       } else {
         beep()
       }
@@ -98,7 +99,7 @@ func getCellReference(canPlace func(*cellReference) bool) (Action, *cellReferenc
       beep()
     }
   }
-  return Action_Terminate, nil
+  return player.Action_Terminate, nil
 }
 
 func readKey() (byte, error) {

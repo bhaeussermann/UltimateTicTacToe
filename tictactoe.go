@@ -6,6 +6,10 @@ import (
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai/alphabeta"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai/montecarlo"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/keyboard"
 	"github.com/gen2brain/beeep"
 	"golang.org/x/term"
 )
@@ -14,21 +18,15 @@ func main() {
   fmt.Println("═══ Ultimate Tic Tac Toe ═══")
 
   var startPlayer game.Player = game.Cell_X
-  var aiDifficulty player.AiDifficulty = player.AiDifficulty_Easy
+  var aiDifficulty ai.Difficulty = ai.Difficulty_Easy
 
   for true {
     didSelect := getGameOptions(&startPlayer, &aiDifficulty)
     if !didSelect {
       return
     }
-    var playerX, playerO player.Player
-    if startPlayer == game.Cell_X {
-      playerX = &player.Keyboard{}
-      playerO = &player.AI{ AiDifficulty: aiDifficulty }
-    } else {
-      playerX = &player.AI{ AiDifficulty: aiDifficulty }
-      playerO = &player.Keyboard{}
-    }
+
+    playerX, playerO := getPlayers(startPlayer, aiDifficulty)
 
     printInstructions()
     state := game.CreateState()
@@ -140,7 +138,7 @@ func printInstructions() {
   fmt.Println("• 'R' to reset")
 }
 
-func getGameOptions(playerSelection *game.Player, aiDifficulty *player.AiDifficulty) bool {
+func getGameOptions(playerSelection *game.Player, aiDifficulty *ai.Difficulty) bool {
   fmt.Println()
   printGameSelection(*playerSelection, *aiDifficulty)
   fmt.Println("ENTER to start. Esc to quit.")
@@ -155,12 +153,12 @@ func getGameOptions(playerSelection *game.Player, aiDifficulty *player.AiDifficu
     if key == '1' {
       if *playerSelection == game.Cell_X { *playerSelection = game.Cell_O } else { *playerSelection = game.Cell_X }
     } else if key == '2' {
-      if *aiDifficulty == player.AiDifficulty_Easy {
-        *aiDifficulty = player.AiDifficulty_Medium
-      } else if *aiDifficulty == player.AiDifficulty_Medium {
-        *aiDifficulty = player.AiDifficulty_Hard
+      if *aiDifficulty == ai.Difficulty_Easy {
+        *aiDifficulty = ai.Difficulty_Medium
+      } else if *aiDifficulty == ai.Difficulty_Medium {
+        *aiDifficulty = ai.Difficulty_Hard
       } else {
-        *aiDifficulty = player.AiDifficulty_Easy
+        *aiDifficulty = ai.Difficulty_Easy
       }
     } else if key == 27 { // Escape
       return false
@@ -176,18 +174,38 @@ func getGameOptions(playerSelection *game.Player, aiDifficulty *player.AiDifficu
   return false
 }
 
-func printGameSelection(selectedPlayer game.Player, aiDifficulty player.AiDifficulty) {
+func printGameSelection(selectedPlayer game.Player, aiDifficulty ai.Difficulty) {
   fmt.Print("(1) Player selection: ")
   if selectedPlayer == game.Cell_X { fmt.Println("X") } else { fmt.Println("O") }
 
   fmt.Print("(2) AI difficulty: ")
-  if aiDifficulty == player.AiDifficulty_Easy {
+  if aiDifficulty == ai.Difficulty_Easy {
     fmt.Println("Easy")
-  } else if aiDifficulty == player.AiDifficulty_Medium {
+  } else if aiDifficulty == ai.Difficulty_Medium {
     fmt.Println("Medium")
   } else {
     fmt.Println("Hard")
   }
+}
+
+func getPlayers(startPlayer game.Player, aiDifficulty ai.Difficulty) (player.Player, player.Player) {
+	humanPlayer := &keyboard.Player{}
+	var aiPlayer player.Player
+	if aiDifficulty == ai.Difficulty_Hard {
+		aiPlayer = &montecarlo.Player{}
+	} else {
+		aiPlayer = &alphabeta.Player{Difficulty: aiDifficulty}
+	}
+
+	var playerX, playerO player.Player
+	if startPlayer == game.Cell_X {
+		playerX = humanPlayer
+		playerO = aiPlayer
+	} else {
+		playerX = aiPlayer
+		playerO = humanPlayer
+	}
+	return playerX, playerO
 }
 
 func readKey() (byte, error) {
