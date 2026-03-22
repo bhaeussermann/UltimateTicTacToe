@@ -12,9 +12,11 @@ import (
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai"
 )
 
-type Player struct {}
+type Player struct {
+  Difficulty ai.Difficulty
+}
 
-func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
+func (p *Player) GetMove(state *game.State) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
   if done {
     return player.Action_None, nil
@@ -27,7 +29,7 @@ func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
   fmt.Println("Thinking...")
   root := createNode(state, nil, nil)
   for 
-  deadline := time.Now().Add(time.Second * 2);
+  deadline := time.Now().Add(p.getTimeoutDuration());
   time.Now().Before(deadline); {
     leaf := selectLeaf(root)
 
@@ -66,6 +68,16 @@ func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
     }
   }
   return player.Action_Move, &bestMove
+}
+
+func (p *Player) getTimeoutDuration() time.Duration {
+  if p.Difficulty == ai.Difficulty_Easy {
+    return time.Second
+  }
+  if p.Difficulty == ai.Difficulty_Medium {
+    return time.Second * 2
+  }
+  return time.Second * 5
 }
 
 func selectLeaf(root *node) *node {

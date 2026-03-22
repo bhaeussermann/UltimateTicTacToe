@@ -191,12 +191,14 @@ func printGameSelection(selectedPlayer game.Player, aiDifficulty ai.Difficulty) 
 func getPlayers(startPlayer game.Player, aiDifficulty ai.Difficulty) (player.Player, player.Player) {
 	humanPlayer := &keyboard.Player{}
 	var aiPlayer player.Player
-	if aiDifficulty == ai.Difficulty_Hard {
-		aiPlayer = &montecarlo.Player{}
-	} else {
-		aiPlayer = &alphabeta.Player{Difficulty: aiDifficulty}
+	if aiDifficulty == ai.Difficulty_Easy {
+		aiPlayer = &alphabeta.Player{Difficulty: ai.Difficulty_Easy}
+  } else if aiDifficulty == ai.Difficulty_Medium {
+		aiPlayer = &alphabeta.Player{Difficulty: ai.Difficulty_Hard}
+  } else {
+		aiPlayer = &montecarlo.Player{Difficulty: ai.Difficulty_Hard}
 	}
-
+  
 	var playerX, playerO player.Player
 	if startPlayer == game.Cell_X {
 		playerX = humanPlayer
