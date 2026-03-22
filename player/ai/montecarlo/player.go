@@ -24,31 +24,36 @@ func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
   totalWins := 0
   totalDraws := 0
 
-  root := node { state: state }
+  fmt.Println("Thinking...")
+  root := createNode(state, nil, nil)
   for 
   deadline := time.Now().Add(time.Second * 2);
-  time.Now().Before(deadline) && !root.isFullyExpanded; {
-    leaf := selectLeaf(&root)
-    children := expand(leaf)
-    for _, child := range children {
-      winner := play(child.state)
+  time.Now().Before(deadline); {
+    leaf := selectLeaf(root)
 
-      totalGames++
-      if winner == state.GetCurrentPlayer() {
-        totalWins++
-      }
-      if winner == game.Cell_None {
-        totalDraws++
-      }
-
-      backpropagate(child, winner)
-
-      isChildStateDone, _ := child.state.GetWinState()
-      if isChildStateDone { setIsFullyExpanded(child) }
+    var child *node
+    var winner game.Player
+    isTerminalNode := len(leaf.potentialMovesToExpand) == 0
+    if isTerminalNode {
+      child = leaf
+      _, winner = child.state.GetWinState()
+    } else {
+      child = expand(leaf)
+      winner = play(child.state)
     }
+
+    totalGames++
+    if winner == state.GetCurrentPlayer() {
+      totalWins++
+    }
+    if winner == game.Cell_None {
+      totalDraws++
+    }
+
+    backpropagate(child, winner)
   }
 
-  fmt.Printf("Total games: %v\r\n", totalGames)
+  fmt.Printf("Simulations: %v\r\n", totalGames)
   fmt.Printf("Wins: %.1f %%\r\n", float64(totalWins + totalDraws / 2) / float64(totalGames) * 100)
 
   var maximumWinRatio float32 = -1
@@ -57,7 +62,7 @@ func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
     winRatio := float32(node.winCount) / float32(node.gameCount)
     if winRatio > maximumWinRatio {
       maximumWinRatio = winRatio
-      bestMove = *node.move
+      bestMove = *node.lastMove
     }
   }
   return player.Action_Move, &bestMove
@@ -65,11 +70,10 @@ func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
 
 func selectLeaf(root *node) *node {
   currentNode := root
-  for ; currentNode.children != nil; {
+  for ; (len(currentNode.potentialMovesToExpand) == 0) && (len(currentNode.children) != 0); {
     var maximumChildScore float64 = -1
     var maximumChild *node
     for _, child := range currentNode.children {
-      if child.isFullyExpanded { continue }
       nodeScore := float64(child.winCount) / float64(child.gameCount) + explorationFactor * math.Sqrt(math.Log2(float64(currentNode.gameCount)) / float64(child.gameCount))
       if nodeScore > maximumChildScore {
         maximumChildScore = nodeScore
@@ -83,15 +87,15 @@ func selectLeaf(root *node) *node {
 
 const explorationFactor = math.Sqrt2
 
-func expand(n *node) []*node {
-  potentialMoves := getPotentialMoves(n.state)
-  n.children = make([]*node, len(potentialMoves))
-  for index, move := range potentialMoves {
-    childState := n.state.Copy()
-    childState.Place(&move)
-    n.children[index] = &node { state: childState, move: &move, parent: n }
-  }
-  return slices.Clone(n.children)
+func expand(n *node) *node {
+  move := n.potentialMovesToExpand[0]
+  n.potentialMovesToExpand = slices.Delete(n.potentialMovesToExpand, 0, 1)
+
+  childState := n.state.Copy()
+  childState.Place(move)
+  childNode := createNode(childState, move, n)
+  n.children = append(n.children, childNode)
+  return childNode
 }
 
 func backpropagate(leaf *node, winner game.Player) {
@@ -107,25 +111,24 @@ func backpropagate(leaf *node, winner game.Player) {
   }
 }
 
-func setIsFullyExpanded(node *node) {
-  for ; node != nil; node = node.parent {
-    node.isFullyExpanded = true
-    if node.parent != nil {
-      for _, child := range node.parent.children {
-        if !child.isFullyExpanded { return }
-      }
-    }
-  }
-}
-
 type node struct {
   state *game.State
-  move *game.Move
+  lastMove *game.Move
   winCount int
   gameCount int
-  isFullyExpanded bool
   parent *node
   children []*node
+  potentialMovesToExpand []*game.Move
+}
+
+func createNode(state *game.State, lastMove *game.Move, parent *node) *node {
+  return &node {
+    state: state,
+    lastMove: lastMove,
+    parent: parent,
+    children: []*node{},
+    potentialMovesToExpand: getPotentialMoves(state),
+  }
 }
 
 func play(state *game.State) game.Player {
@@ -136,24 +139,28 @@ func play(state *game.State) game.Player {
   for ; !done; done, winner = stateCopy.GetWinState() {
     potentialMoves := getPotentialMoves(stateCopy)
     move := potentialMoves[rand.Intn(len(potentialMoves))]
-    stateCopy.Place(&move)
+    stateCopy.Place(move)
   }
   return winner
 }
 
-func getPotentialMoves(state *game.State) []game.Move {
-	var potentialMoves []game.Move
+func getPotentialMoves(state *game.State) []*game.Move {
+	var potentialMoves []*game.Move
+
+  done, _ := state.GetWinState()
+  if done { return potentialMoves }
+
   activeBoardReference := state.GetActiveBoard()
 	if activeBoardReference != nil {
 		for _, location := range getPotentialMoveLocations(state.GetBoard(activeBoardReference).Cells) {
-			potentialMoves = append(potentialMoves, game.Move{Board: activeBoardReference, RowNumber: location.RowNumber, ColumnNumber: location.ColumnNumber})
+			potentialMoves = append(potentialMoves, &game.Move{Board: activeBoardReference, RowNumber: location.RowNumber, ColumnNumber: location.ColumnNumber})
 		}
 	} else {
     for _, potentialMoveBoard := range getPotentialMoveLocations(state.GetSuperBoard()) {
       boardReference := game.BoardReference{RowNumber: potentialMoveBoard.RowNumber, ColumnNumber: potentialMoveBoard.ColumnNumber}
       board := state.GetBoard(&boardReference)
       for _, location := range getPotentialMoveLocations(board.Cells) {
-        potentialMoves = append(potentialMoves, game.Move{Board: &boardReference, RowNumber: location.RowNumber, ColumnNumber: location.ColumnNumber})
+        potentialMoves = append(potentialMoves, &game.Move{Board: &boardReference, RowNumber: location.RowNumber, ColumnNumber: location.ColumnNumber})
       }
 		}
 	}
