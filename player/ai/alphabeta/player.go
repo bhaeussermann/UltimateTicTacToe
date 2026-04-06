@@ -14,7 +14,7 @@ type Player struct {
   Difficulty ai.Difficulty
 }
 
-func (p *Player) GetMove(state *game.State, log *player.Log) (player.Action, *game.Move) {
+func (p *Player) GetMove(state *game.State, log player.Log) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
   if done {
     return player.Action_None, nil
@@ -24,11 +24,12 @@ func (p *Player) GetMove(state *game.State, log *player.Log) (player.Action, *ga
 }
 
 func (p *Player) getDepth() int {
-  if p.Difficulty == ai.Difficulty_Easy {
+  switch p.Difficulty {
+  case ai.Difficulty_Easy:
     return 1
-  } else if p.Difficulty == ai.Difficulty_Medium {
+  case ai.Difficulty_Medium:
     return 4
-  } else {
+  default:
     return 6
   }
 }

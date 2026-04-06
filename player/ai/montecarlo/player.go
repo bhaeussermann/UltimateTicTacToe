@@ -1,7 +1,6 @@
 package montecarlo
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"slices"
@@ -16,7 +15,7 @@ type Player struct {
   Difficulty ai.Difficulty
 }
 
-func (p *Player) GetMove(state *game.State, log *player.Log) (player.Action, *game.Move) {
+func (p *Player) GetMove(state *game.State, log player.Log) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
   if done {
     return player.Action_None, nil
@@ -26,7 +25,6 @@ func (p *Player) GetMove(state *game.State, log *player.Log) (player.Action, *ga
   totalWins := 0
   totalDraws := 0
 
-  fmt.Println("Thinking...")
   root := createNode(state, nil, nil)
   for 
   deadline := time.Now().Add(p.getTimeoutDuration());

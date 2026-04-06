@@ -53,7 +53,7 @@ const (
 
 func step(
   state **game.State,
-  log *player.Log,
+  messageLog *player.MessageLog,
   playerSelection game.Player,
   playerX *player.Player,
   playerO *player.Player,
@@ -67,10 +67,10 @@ func step(
       printInstructions()
     }
     fmt.Println((*state).GetSuperBoard().ToString((*state).GetActiveBoard()))
-    for _, message := range log.GetMessages() {
+    for _, message := range messageLog.GetMessages() {
       fmt.Print(message)
     }
-    log.Clear()
+    messageLog.Clear()
   }
 
   var currentPlayer player.Player
@@ -80,6 +80,10 @@ func step(
     currentPlayer = *playerO
   }
 
+  if !isKeyboardPlayer {
+    fmt.Println("Thinking...")
+  }
+  var log player.Log = messageLog
   action, move := currentPlayer.GetMove(*state, log)
   switch action {
   case player.Action_Restart:

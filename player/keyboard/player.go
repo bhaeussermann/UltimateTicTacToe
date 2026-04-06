@@ -13,7 +13,7 @@ import (
 
 type Player struct {}
 
-func (*Player) GetMove(state *game.State, log *player.Log) (player.Action, *game.Move) {
+func (*Player) GetMove(state *game.State, log player.Log) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
 
   if done {

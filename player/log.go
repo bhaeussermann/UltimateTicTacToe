@@ -5,24 +5,34 @@ import (
 	"strings"
 )
 
-type Log struct {
+type Log interface {
+  Logf(format string, a ...any)
+}
+
+type MessageLog struct {
   messages []string
 }
 
-func CreateLog() *Log {
-  return &Log { messages: []string {} }
+func CreateLog() *MessageLog {
+  return &MessageLog { messages: []string {} }
 }
 
-func (log *Log) Logf(format string, a ...any) {
+func (log *MessageLog) Logf(format string, a ...any) {
   var stringBuilder strings.Builder
   fmt.Fprintf(&stringBuilder, format, a...)
   log.messages = append(log.messages, stringBuilder.String())
 }
 
-func (log *Log) Clear() {
+func (log *MessageLog) Clear() {
   log.messages = []string {}
 }
 
-func (log *Log) GetMessages() []string {
+func (log *MessageLog) GetMessages() []string {
   return log.messages
 }
+
+type nilLog struct {}
+
+var NilLog Log = &nilLog{}
+
+func (*nilLog) Logf(format string, a ...any) {}

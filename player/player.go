@@ -5,7 +5,7 @@ import (
 )
 
 type Player interface {
-  GetMove(state *game.State, log *Log) (Action, *game.Move)
+  GetMove(state *game.State, log Log) (Action, *game.Move)
 }
 
 type Action byte
