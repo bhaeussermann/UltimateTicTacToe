@@ -64,10 +64,6 @@ func (boardCells BoardCells) IsEmpty(rowNumber byte, columnNumber byte) bool {
   return boardCells[rowNumber][columnNumber] == Cell_None
 }
 
-func (superBoard *SuperBoard) GetHorizontalLine() string {
-  return repeat("═", Size * (Size * 4 + 2) + 3)
-}
-
 func (superBoard *SuperBoard) ToString(activeBoard *BoardReference) string {
   boardAsString := ""
   for boardsRowIndex, boardsRow := range superBoard {

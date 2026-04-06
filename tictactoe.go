@@ -11,12 +11,11 @@ import (
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai/montecarlo"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/keyboard"
 	"github.com/gen2brain/beeep"
+	"github.com/inancgumus/screen"
 	"golang.org/x/term"
 )
 
 func main() {
-  fmt.Println("═══ Ultimate Tic Tac Toe ═══")
-
   var startPlayer game.Player = game.Cell_X
   var aiDifficulty ai.Difficulty = ai.Difficulty_Easy
 
@@ -30,12 +29,13 @@ func main() {
 
     printInstructions()
     state := game.CreateState()
+    log := player.CreateLog()
     undoStates := []*game.State { }
     redoStates := []*game.State { }
 
     var gameContinuation gameContinuation
     for gameContinuation = gameContinuation_Continue; gameContinuation == gameContinuation_Continue; {
-      gameContinuation = step(&state, startPlayer, &playerX, &playerO, &undoStates, &redoStates)
+      gameContinuation = step(&state, log, startPlayer, &playerX, &playerO, &undoStates, &redoStates)
     }
     if gameContinuation == gameContinuation_Stop {
       return;
@@ -53,17 +53,24 @@ const (
 
 func step(
   state **game.State,
+  log *player.Log,
   playerSelection game.Player,
   playerX *player.Player,
   playerO *player.Player,
   undoStates *[]*game.State,
   redoStates *[]*game.State) gameContinuation {
+  isKeyboardPlayer := (*state).GetCurrentPlayer() == playerSelection
   isGameDone, _ := (*state).GetWinState()
   if !isGameDone {
-    fmt.Println()
-    fmt.Println((*state).GetSuperBoard().GetHorizontalLine())
-    fmt.Println()
+    clear()
+    if isKeyboardPlayer && (len(*undoStates) == 0) {
+      printInstructions()
+    }
     fmt.Println((*state).GetSuperBoard().ToString((*state).GetActiveBoard()))
+    for _, message := range log.GetMessages() {
+      fmt.Print(message)
+    }
+    log.Clear()
   }
 
   var currentPlayer player.Player
@@ -72,7 +79,8 @@ func step(
   } else {
     currentPlayer = *playerO
   }
-  action, move := currentPlayer.GetMove(*state)
+
+  action, move := currentPlayer.GetMove(*state, log)
   switch action {
   case player.Action_Restart:
     return gameContinuation_Restart
@@ -95,7 +103,6 @@ func step(
       *redoStates = (*redoStates)[:len(*redoStates) - 1]
     }
   case player.Action_Move:
-    isKeyboardPlayer := (*state).GetCurrentPlayer() == playerSelection
     if isKeyboardPlayer {
       *undoStates = append(*undoStates, (*state).Copy())
       *redoStates = (*redoStates)[0:0]
@@ -109,7 +116,7 @@ func step(
     var winner game.Player
     isGameDone, winner = (*state).GetWinState()
     if isGameDone {
-      fmt.Println()
+      clear()
       fmt.Println((*state).GetSuperBoard().ToString(nil))
       fmt.Println()
       switch (winner) {
@@ -139,10 +146,8 @@ func printInstructions() {
 }
 
 func getGameOptions(playerSelection *game.Player, aiDifficulty *ai.Difficulty) bool {
-  fmt.Println()
   printGameSelection(*playerSelection, *aiDifficulty)
-  fmt.Println("ENTER to start. Esc to quit.")
-
+  
   for true {
     key, error := readKey()
     if error != nil {
@@ -150,21 +155,23 @@ func getGameOptions(playerSelection *game.Player, aiDifficulty *ai.Difficulty) b
       return false
     }
 
-    if key == '1' {
+    switch key {
+    case '1':
       if *playerSelection == game.Cell_X { *playerSelection = game.Cell_O } else { *playerSelection = game.Cell_X }
-    } else if key == '2' {
-      if *aiDifficulty == ai.Difficulty_Easy {
+    case '2':
+      switch *aiDifficulty {
+      case ai.Difficulty_Easy:
         *aiDifficulty = ai.Difficulty_Medium
-      } else if *aiDifficulty == ai.Difficulty_Medium {
+      case ai.Difficulty_Medium:
         *aiDifficulty = ai.Difficulty_Hard
-      } else {
+      default:
         *aiDifficulty = ai.Difficulty_Easy
       }
-    } else if key == 27 { // Escape
+    case 27: // Escape
       return false
-    } else if key == 13 { // Enter
+    case 13: // Enter
       return true
-    } else {
+    default:
       beep()
     }
 
@@ -175,27 +182,35 @@ func getGameOptions(playerSelection *game.Player, aiDifficulty *ai.Difficulty) b
 }
 
 func printGameSelection(selectedPlayer game.Player, aiDifficulty ai.Difficulty) {
+  clear()
+  fmt.Println("═══ Ultimate Tic Tac Toe ═══")
+  fmt.Println()
   fmt.Print("(1) Player selection: ")
   if selectedPlayer == game.Cell_X { fmt.Println("X") } else { fmt.Println("O") }
 
   fmt.Print("(2) AI difficulty: ")
-  if aiDifficulty == ai.Difficulty_Easy {
+  switch aiDifficulty {
+  case ai.Difficulty_Easy:
     fmt.Println("Easy")
-  } else if aiDifficulty == ai.Difficulty_Medium {
+  case ai.Difficulty_Medium:
     fmt.Println("Medium")
-  } else {
+  default:
     fmt.Println("Hard")
   }
+  
+  fmt.Println()
+  fmt.Println("ENTER to start. Esc to quit.")
 }
 
 func getPlayers(startPlayer game.Player, aiDifficulty ai.Difficulty) (player.Player, player.Player) {
 	humanPlayer := &keyboard.Player{}
 	var aiPlayer player.Player
-	if aiDifficulty == ai.Difficulty_Easy {
+	switch aiDifficulty {
+  case ai.Difficulty_Easy:
 		aiPlayer = &alphabeta.Player{Difficulty: ai.Difficulty_Easy}
-  } else if aiDifficulty == ai.Difficulty_Medium {
+  case ai.Difficulty_Medium:
 		aiPlayer = &alphabeta.Player{Difficulty: ai.Difficulty_Hard}
-  } else {
+  default:
 		aiPlayer = &montecarlo.Player{Difficulty: ai.Difficulty_Hard}
 	}
   
@@ -219,6 +234,11 @@ func readKey() (byte, error) {
   readBuffer := make([]byte, 1)
   os.Stdin.Read(readBuffer)
   return readBuffer[0], nil
+}
+
+func clear() {
+  screen.Clear()
+  screen.MoveTopLeft()
 }
 
 func beep() {

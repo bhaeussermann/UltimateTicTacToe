@@ -16,7 +16,7 @@ type Player struct {
   Difficulty ai.Difficulty
 }
 
-func (p *Player) GetMove(state *game.State) (player.Action, *game.Move) {
+func (p *Player) GetMove(state *game.State, log *player.Log) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
   if done {
     return player.Action_None, nil
@@ -55,8 +55,8 @@ func (p *Player) GetMove(state *game.State) (player.Action, *game.Move) {
     backpropagate(child, winner)
   }
 
-  fmt.Printf("Simulations: %v\r\n", totalGames)
-  fmt.Printf("Wins: %.1f %%\r\n", float64(totalWins + totalDraws / 2) / float64(totalGames) * 100)
+  log.Logf("Simulations: %v\r\n", totalGames)
+  log.Logf("Wins: %.1f %%\r\n", float64(totalWins + totalDraws / 2) / float64(totalGames) * 100)
 
   var maximumWinRatio float32 = -1
   var bestMove game.Move
@@ -71,13 +71,11 @@ func (p *Player) GetMove(state *game.State) (player.Action, *game.Move) {
 }
 
 func (p *Player) getTimeoutDuration() time.Duration {
-  if p.Difficulty == ai.Difficulty_Easy {
-    return time.Second
+  switch p.Difficulty {
+  case ai.Difficulty_Easy: return time.Second
+  case ai.Difficulty_Medium: return time.Second * 2
+  default: return time.Second * 5
   }
-  if p.Difficulty == ai.Difficulty_Medium {
-    return time.Second * 2
-  }
-  return time.Second * 5
 }
 
 func selectLeaf(root *node) *node {

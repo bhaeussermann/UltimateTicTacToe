@@ -7,12 +7,13 @@ import (
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player"
 	"github.com/gen2brain/beeep"
+	"github.com/inancgumus/screen"
 	"golang.org/x/term"
 )
 
 type Player struct {}
 
-func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
+func (*Player) GetMove(state *game.State, log *player.Log) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
 
   if done {
@@ -52,6 +53,8 @@ func (*Player) GetMove(state *game.State) (player.Action, *game.Move) {
       return action, nil
     }
     boardReference = &game.BoardReference { RowNumber: cellReference.rowNumber, ColumnNumber: cellReference.columnNumber }
+    screen.Clear()
+    screen.MoveTopLeft()
     fmt.Println(state.GetSuperBoard().ToString(boardReference))
     fmt.Print("Your move: ")
   }
