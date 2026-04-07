@@ -3,7 +3,10 @@ package montecarlo
 import (
 	"math"
 	"math/rand"
+	"runtime"
 	"slices"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
@@ -15,46 +18,35 @@ type Player struct {
   Difficulty ai.Difficulty
 }
 
+type gameCounts struct {
+  totalGames uint32
+  totalWins uint32
+  totalDraws uint32
+}
+
 func (p *Player) GetMove(state *game.State, log player.Log) (player.Action, *game.Move) {
   done, _ := state.GetWinState()
   if done {
     return player.Action_None, nil
   }
 
-  totalGames := 0
-  totalWins := 0
-  totalDraws := 0
-
   root := createNode(state, nil, nil)
-  for 
-  deadline := time.Now().Add(p.getTimeoutDuration());
-  time.Now().Before(deadline); {
-    leaf := selectLeaf(root)
-
-    var child *node
-    var winner game.Player
-    isTerminalNode := len(leaf.potentialMovesToExpand) == 0
-    if isTerminalNode {
-      child = leaf
-      _, winner = child.state.GetWinState()
-    } else {
-      child = expand(leaf)
-      winner = play(child.state)
-    }
-
-    totalGames++
-    if winner == state.GetCurrentPlayer() {
-      totalWins++
-    }
-    if winner == game.Cell_None {
-      totalDraws++
-    }
-
-    backpropagate(child, winner)
+  treeMutex := sync.Mutex {}
+  gameCounts := gameCounts {}
+  isRunning := true
+  workerCount := runtime.NumCPU()
+  var waitGroup sync.WaitGroup
+  waitGroup.Add(workerCount)
+  for count := 0; count < workerCount; count++ {
+    go search(root, &treeMutex, state, &gameCounts, &isRunning, &waitGroup)
   }
 
-  log.Logf("Simulations: %v\r\n", totalGames)
-  log.Logf("Wins: %.1f %%\r\n", float64(totalWins + totalDraws / 2) / float64(totalGames) * 100)
+  time.Sleep(p.getTimeoutDuration())
+  isRunning = false
+  waitGroup.Wait()
+
+  log.Logf("Simulations: %v\r\n", gameCounts.totalGames)
+  log.Logf("Wins: %.1f %%\r\n", float64(gameCounts.totalWins + gameCounts.totalDraws / 2) / float64(gameCounts.totalGames) * 100)
 
   var maximumWinRatio float32 = -1
   var bestMove game.Move
@@ -66,6 +58,37 @@ func (p *Player) GetMove(state *game.State, log player.Log) (player.Action, *gam
     }
   }
   return player.Action_Move, &bestMove
+}
+
+func search(root *node, treeMutex *sync.Mutex, state *game.State, gameCounts *gameCounts, isRunning *bool, waitGroup *sync.WaitGroup) {
+  defer waitGroup.Done()
+	for *isRunning {
+    treeMutex.Lock()
+    leaf := selectLeaf(root)
+
+    var child *node
+    var winner game.Player
+    isTerminalNode := len(leaf.potentialMovesToExpand) == 0
+    if isTerminalNode {
+      treeMutex.Unlock()
+      child = leaf
+      _, winner = child.state.GetWinState()
+    } else {
+      child = expand(leaf)
+      treeMutex.Unlock()
+      winner = play(child.state)
+    }
+
+    backpropagate(child, winner)
+
+		atomic.AddUint32(&gameCounts.totalGames, 1)
+		if winner == state.GetCurrentPlayer() {
+			atomic.AddUint32(&gameCounts.totalWins, 1)
+		}
+		if winner == game.Cell_None {
+			atomic.AddUint32(&gameCounts.totalDraws, 1)
+		}
+	}
 }
 
 func (p *Player) getTimeoutDuration() time.Duration {
@@ -113,17 +136,17 @@ func backpropagate(leaf *node, winner game.Player) {
 
   for currentNode := leaf; currentNode != nil; currentNode = currentNode.parent {
     if (currentNode.parent != nil) && (currentNode.parent.state.GetCurrentPlayer() == winner) {
-      currentNode.winCount++
+      atomic.AddUint32(&currentNode.winCount, 1)
     }
-    currentNode.gameCount++
+    atomic.AddUint32(&currentNode.gameCount, 1)
   }
 }
 
 type node struct {
   state *game.State
   lastMove *game.Move
-  winCount int
-  gameCount int
+  winCount uint32
+  gameCount uint32
   parent *node
   children []*node
   potentialMovesToExpand []*game.Move
