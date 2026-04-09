@@ -1,6 +1,7 @@
 package montecarlo
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"runtime"
@@ -30,19 +31,45 @@ func (p *Player) GetMove(state *game.State, log player.Log) (player.Action, *gam
     return player.Action_None, nil
   }
 
-  root := createNode(state, nil, nil)
-  treeMutex := sync.Mutex {}
+  aiPlayer := state.GetCurrentPlayer()
   gameCounts := gameCounts {}
-  isRunning := true
-  workerCount := runtime.NumCPU()
+
+  childNodeChannel := make(chan *node, runtime.NumCPU() + 2)
+  stopContext, cancel := context.WithCancel(context.Background())
+  defer cancel()
+
+  workerCount := runtime.NumCPU() + 2
   var waitGroup sync.WaitGroup
   waitGroup.Add(workerCount)
-  for count := 0; count < workerCount; count++ {
-    go search(root, &treeMutex, state, &gameCounts, &isRunning, &waitGroup)
+  
+  for range workerCount {
+    go simulate(aiPlayer, &gameCounts, childNodeChannel, stopContext, &waitGroup)
   }
 
-  time.Sleep(p.getTimeoutDuration())
-  isRunning = false
+  root := createNode(state, nil, nil)
+  for 
+  deadline := time.Now().Add(p.getTimeoutDuration());
+  time.Now().Before(deadline); {
+    var leaf *node
+    var didFindLeaf bool
+    for !didFindLeaf {
+      leaf, didFindLeaf = selectLeaf(root)
+      if !didFindLeaf {
+        runtime.Gosched()
+      }
+    }
+
+    isTerminalNode := len(leaf.potentialMovesToExpand) == 0
+    if isTerminalNode {
+      _, winner := leaf.state.GetWinState()
+      registerNodeOutcome(leaf, aiPlayer, winner, &gameCounts)
+    } else {
+      childNode := expand(leaf)
+      childNodeChannel <- childNode
+    }
+  }
+
+  cancel()
   waitGroup.Wait()
 
   log.Logf("Simulations: %v\r\n", gameCounts.totalGames)
@@ -60,37 +87,6 @@ func (p *Player) GetMove(state *game.State, log player.Log) (player.Action, *gam
   return player.Action_Move, &bestMove
 }
 
-func search(root *node, treeMutex *sync.Mutex, state *game.State, gameCounts *gameCounts, isRunning *bool, waitGroup *sync.WaitGroup) {
-  defer waitGroup.Done()
-	for *isRunning {
-    treeMutex.Lock()
-    leaf := selectLeaf(root)
-
-    var child *node
-    var winner game.Player
-    isTerminalNode := len(leaf.potentialMovesToExpand) == 0
-    if isTerminalNode {
-      treeMutex.Unlock()
-      child = leaf
-      _, winner = child.state.GetWinState()
-    } else {
-      child = expand(leaf)
-      treeMutex.Unlock()
-      winner = play(child.state)
-    }
-
-    backpropagate(child, winner)
-
-		atomic.AddUint32(&gameCounts.totalGames, 1)
-		if winner == state.GetCurrentPlayer() {
-			atomic.AddUint32(&gameCounts.totalWins, 1)
-		}
-		if winner == game.Cell_None {
-			atomic.AddUint32(&gameCounts.totalDraws, 1)
-		}
-	}
-}
-
 func (p *Player) getTimeoutDuration() time.Duration {
   switch p.Difficulty {
   case ai.Difficulty_Easy: return time.Second
@@ -99,21 +95,52 @@ func (p *Player) getTimeoutDuration() time.Duration {
   }
 }
 
-func selectLeaf(root *node) *node {
+func simulate(aiPlayer game.Player, gameCounts *gameCounts, childNodeChannel <-chan *node, stopContext context.Context, waitGroup *sync.WaitGroup) {
+  defer waitGroup.Done()
+	for true {
+    select {
+    case childNode := <-childNodeChannel: {
+      winner := play(childNode.state)
+      registerNodeOutcome(childNode, aiPlayer, winner, gameCounts)
+    }
+    case <-stopContext.Done(): return
+    }
+	}
+}
+
+func registerNodeOutcome(node *node, aiPlayer game.Player, winner game.Player, gameCounts *gameCounts) {
+	backpropagate(node, winner)
+
+	atomic.AddUint32(&gameCounts.totalGames, 1)
+	if winner == aiPlayer {
+		atomic.AddUint32(&gameCounts.totalWins, 1)
+	}
+	if winner == game.Cell_None {
+		atomic.AddUint32(&gameCounts.totalDraws, 1)
+	}
+}
+
+func selectLeaf(root *node) (*node, bool) {
   currentNode := root
   for ; (len(currentNode.potentialMovesToExpand) == 0) && (len(currentNode.children) != 0); {
     var maximumChildScore float64 = -1
     var maximumChild *node
     for _, child := range currentNode.children {
+      if child.gameCount == 0 {
+        continue
+      }
       nodeScore := float64(child.winCount) / float64(child.gameCount) + explorationFactor * math.Sqrt(math.Log2(float64(currentNode.gameCount)) / float64(child.gameCount))
       if nodeScore > maximumChildScore {
         maximumChildScore = nodeScore
         maximumChild = child
       }
     }
+    if maximumChild == nil {
+      return nil, false
+    }
     currentNode = maximumChild
   }
-  return currentNode
+  return currentNode, true
 }
 
 const explorationFactor = math.Sqrt2
