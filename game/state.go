@@ -124,12 +124,10 @@ func (board *Board) updateBoardOwner() {
   if hasAnyLineFilled(board.Cells, Cell_X) {
     board.Done = true
     board.Owner = Cell_X
-  }
-  if hasAnyLineFilled(board.Cells, Cell_O) {
+  } else if hasAnyLineFilled(board.Cells, Cell_O) {
     board.Done = true
     board.Owner = Cell_O
-  }
-  if !hasEmptyCell(board.Cells) {
+  } else if !hasEmptyCell(board.Cells) {
     board.Done = true
     board.Owner = Cell_None
   }
@@ -139,12 +137,10 @@ func (state *State) updateWinState() {
   if hasAnyLineFilled(state.superBoard, Cell_X) {
     state.winner = Cell_X
     state.done = true
-  }
-  if hasAnyLineFilled(state.superBoard, Cell_O) {
+  } else if hasAnyLineFilled(state.superBoard, Cell_O) {
     state.winner = Cell_O
     state.done = true
-  }
-  if !hasEmptyCell(state.superBoard) {
+  } else if !hasEmptyCell(state.superBoard) {
     state.done = true
   }
 }
