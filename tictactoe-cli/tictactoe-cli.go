@@ -7,8 +7,7 @@ import (
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai"
-	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai/alphabeta"
-	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai/montecarlo"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai/factory"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/keyboard"
 	"github.com/gen2brain/beeep"
 	"github.com/inancgumus/screen"
@@ -16,16 +15,16 @@ import (
 )
 
 func main() {
-  var startPlayer game.Player = game.Cell_X
+  var playerSelection game.Player = game.Cell_X
   var aiDifficulty ai.Difficulty = ai.Difficulty_Easy
 
   for true {
-    didSelect := getGameOptions(&startPlayer, &aiDifficulty)
+    didSelect := getGameOptions(&playerSelection, &aiDifficulty)
     if !didSelect {
       return
     }
 
-    playerX, playerO := getPlayers(startPlayer, aiDifficulty)
+    playerX, playerO := getPlayers(playerSelection, aiDifficulty)
 
     printInstructions()
     state := game.CreateState()
@@ -35,7 +34,7 @@ func main() {
 
     var gameContinuation gameContinuation
     for gameContinuation = gameContinuation_Continue; gameContinuation == gameContinuation_Continue; {
-      gameContinuation = step(&state, log, startPlayer, &playerX, &playerO, &undoStates, &redoStates)
+      gameContinuation = step(&state, log, playerSelection, &playerX, &playerO, &undoStates, &redoStates)
     }
     if gameContinuation == gameContinuation_Stop {
       return;
@@ -206,27 +205,14 @@ func printGameSelection(selectedPlayer game.Player, aiDifficulty ai.Difficulty) 
   fmt.Println("ENTER to start. Esc to quit.")
 }
 
-func getPlayers(startPlayer game.Player, aiDifficulty ai.Difficulty) (player.Player, player.Player) {
+func getPlayers(playerSelection game.Player, aiDifficulty ai.Difficulty) (player.Player, player.Player) {
 	humanPlayer := &keyboard.Player{}
-	var aiPlayer player.Player
-	switch aiDifficulty {
-  case ai.Difficulty_Easy:
-		aiPlayer = &alphabeta.Player{Difficulty: ai.Difficulty_Easy}
-  case ai.Difficulty_Medium:
-		aiPlayer = &alphabeta.Player{Difficulty: ai.Difficulty_Hard}
-  default:
-		aiPlayer = &montecarlo.Player{Difficulty: ai.Difficulty_Hard}
-	}
-  
-	var playerX, playerO player.Player
-	if startPlayer == game.Cell_X {
-		playerX = humanPlayer
-		playerO = aiPlayer
+	aiPlayer := factory.CreateAIPlayer(aiDifficulty)
+	if playerSelection == game.Cell_X {
+    return humanPlayer, aiPlayer
 	} else {
-		playerX = aiPlayer
-		playerO = humanPlayer
+    return aiPlayer, humanPlayer
 	}
-	return playerX, playerO
 }
 
 func readKey() (byte, error) {

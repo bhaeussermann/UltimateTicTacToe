@@ -54,10 +54,13 @@ func (state *State) GetWinState() (bool, Player) {
 }
 
 func (state *State) CanPlaceIn(boardReference *BoardReference) bool {
+  if state.done { 
+    return false
+  }
   if (state.activeBoard == nil) {
     return !state.GetBoard(boardReference).Done
   }
-  return &state.activeBoard == &boardReference
+  return *state.activeBoard == *boardReference
 }
 
 func (state *State) CanPlace(move *Move) bool {

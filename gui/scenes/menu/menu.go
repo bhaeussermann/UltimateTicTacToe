@@ -79,7 +79,9 @@ func (t *TitleScreen) Update() scenes.SceneChange {
       }
 		}
 		case 3: {
-			return scenes.SceneChange{GetNextScene: func() (scenes.Scene, error) { return gamescene.NewGame(NewTitleScreen) }}
+			return scenes.SceneChange{GetNextScene: func() (scenes.Scene, error) {
+				return gamescene.NewGame(t.playerSelection, t.aiDifficulty, NewTitleScreen)
+			}}
 		}
 		case 4: {
 			return scenes.SceneChange{Terminate: true}	
