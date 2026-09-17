@@ -30,7 +30,7 @@ type TitleScreen struct {
 	aiDifficulty ai.Difficulty
 }
 
-func NewTitleScreen() (scenes.Scene, error) {
+func NewTitleScreen(playerSelection game.Player, aiDifficulty ai.Difficulty) (scenes.Scene, error) {
 	regularTextFaceSource, error := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
 	if error != nil {
 		return nil, error
@@ -46,8 +46,8 @@ func NewTitleScreen() (scenes.Scene, error) {
 		boldTextFaceSource: boldTextFaceSource,
 		backgroundPixels: []byte{},
 		selectedMenuItemIndex: -1,
-		playerSelection: game.Cell_X,
-		aiDifficulty: ai.Difficulty_Easy,
+		playerSelection: playerSelection,
+		aiDifficulty: aiDifficulty,
 	}, nil
 }
 
@@ -80,7 +80,7 @@ func (t *TitleScreen) Update() scenes.SceneChange {
 		}
 		case 3: {
 			return scenes.SceneChange{GetNextScene: func() (scenes.Scene, error) {
-				return gamescene.NewGame(t.playerSelection, t.aiDifficulty, NewTitleScreen)
+				return gamescene.NewGame(t.playerSelection, t.aiDifficulty, func() (scenes.Scene, error) { return NewTitleScreen(t.playerSelection, t.aiDifficulty) })
 			}}
 		}
 		case 4: {
@@ -154,8 +154,6 @@ func revolvingMod(n int, m int) int {
 }
 
 func abs(n int) int { if n < 0 { return -n } else { return n } }
-
-func max(a int, b int) int { if a > b { return a } else { return b }}
 
 func (t *TitleScreen) drawTitle(screen *ebiten.Image) {
 	t.drawTextLineBackground(screen, titleTopMargin, titleTextSize + textMarginHeight * 2)

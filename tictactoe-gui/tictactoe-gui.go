@@ -8,7 +8,7 @@ import (
 func main() {
   ebiten.SetWindowTitle("Ultimate Tic Tac Toe")
   ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-  ebiten.SetWindowSize(800, 600)
+  ebiten.SetWindowSize(900, 600)
   ebiten.SetWindowSizeLimits(400, 350, -1, -1)
 	game, error := game.NewGame()
   if error != nil {

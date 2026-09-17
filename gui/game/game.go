@@ -3,8 +3,10 @@ package game
 import (
 	"log"
 
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/gui/scenes"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/gui/scenes/menu"
+	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -13,7 +15,7 @@ type Game struct {
 }
 
 func NewGame() (*Game, error) {
-	scene, error := menu.NewTitleScreen()
+	scene, error := menu.NewTitleScreen(game.Cell_X, ai.Difficulty_Easy)
 	if error != nil {
 		return nil, error
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/gui/scenes"
@@ -25,6 +26,8 @@ type Game struct {
 	playerSelection game.Player
 	playerX, playerO player.Player
 	state *game.State
+	logText string
+	isAiThinking bool
 	activeUiPlayer *uiPlayer
 	isClicking bool
 }
@@ -65,7 +68,7 @@ func (g *Game) Update() scenes.SceneChange {
 			if g.activeUiPlayer != nil {
 				g.activeUiPlayer.unblock()
 			}
-			return scenes.SceneChange{GetNextScene: g.exitToScene }
+			return scenes.SceneChange{GetNextScene: g.exitToScene}
 		}
 
 		if g.activeUiPlayer != nil {
@@ -80,13 +83,26 @@ func (g *Game) Update() scenes.SceneChange {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	g.drawSuperBoard(screen)
 	drawExitButton(screen, float32(g.screenWidth) - exitButtonSize - margin, margin)
+	g.drawSuperBoard(screen)
+	g.writeStatusMessage(screen)
+	g.writeMessageLog(screen)
+	g.drawBusyIndicator(screen)
+}
+
+func drawExitButton(screen *ebiten.Image, x, y float32) {
+	cursorX, cursorY := ebiten.CursorPosition()
+	cursorXf, cursorYf := float32(cursorX), float32(cursorY)
+	if (x <= cursorXf && cursorXf <= x + exitButtonSize) && (y <= cursorYf && cursorYf <= y + exitButtonSize) {
+		vector.FillRect(screen, x, y, exitButtonSize, exitButtonSize, highlightColor, false)
+	}
+
+	drawCross(screen, x + padding, y + padding, exitCrossSize, smallStrokeWidth, foregroundColor)
 }
 
 func (g *Game) drawSuperBoard(screen *ebiten.Image) {
 	g.drawHoveredCell(screen)
-	
+
 	boardDrawSize := g.getBoardDrawSize()
 	cellDrawSize := g.getCellDrawSize()
 	for boardRow := range game.Size {
@@ -149,7 +165,7 @@ func (g *Game) drawGrid(screen *ebiten.Image, x, y float32, boardForegroundColor
 func (g *Game) drawBoardSymbols(screen *ebiten.Image, board *game.Board, boardXOffset, boardYOffset float32, boardCrossColor ebiten.ColorScale, boardNaughtColor ebiten.ColorScale) {
 	cellDrawSize := g.getCellDrawSize()
 	cellSymbolDrawSize := cellDrawSize * (1 - cellPaddingRatio * 2)
-	
+
 	var cellRow, cellColumn byte
 	for cellRow = range game.Size {
 		cellY := boardYOffset + (float32(cellRow) + cellPaddingRatio) * cellDrawSize
@@ -215,14 +231,116 @@ func drawDash(screen *ebiten.Image, x, y, size float32, strokeWidth float32, col
 		&vector.DrawPathOptions{AntiAlias: true, ColorScale: color})
 }
 
-func drawExitButton(screen *ebiten.Image, x, y float32) {
-	cursorX, cursorY := ebiten.CursorPosition()
-	cursorXf, cursorYf := float32(cursorX), float32(cursorY)
-	if (x <= cursorXf && cursorXf <= x + exitButtonSize) && (y <= cursorYf && cursorYf <= y + exitButtonSize) {
-		vector.FillRect(screen, x, y, exitButtonSize, exitButtonSize, highlightColor, false)
+func (g *Game) writeStatusMessage(screen *ebiten.Image) {
+	done, winner := g.state.GetWinState()
+	if !done { return }
+
+	switch winner {
+	case game.Cell_X:
+		g.writeStatusMessageText(screen, "Cross is the winner!")
+	case game.Cell_O:
+		g.writeStatusMessageText(screen, "Naughts is the winner!")
+	default:
+		g.writeStatusMessageText(screen, "It's a tie.")
+	}
+}
+
+func (g *Game) writeStatusMessageText(screen *ebiten.Image, messageText string) {
+	var textYRatio float32
+	hasLogText := len(g.logText) != 0
+	if hasLogText {
+		textYRatio = 1.0 / 3.0
+	} else {
+		textYRatio = 0.5
+	}
+	gameFieldSize, textLocation := g.getGameFieldSize()
+	gameFieldSize -= g.getCellDrawSize()
+	var textX, textY float32
+	if textLocation == TextLocation_Side {
+		textX = gameFieldSize + (float32(g.screenWidth) - gameFieldSize) / 2
+		textY = float32(g.screenHeight) * textYRatio
+	} else {
+		textX = float32(g.screenWidth) / 2
+		textY = gameFieldSize + (float32(g.screenHeight) - gameFieldSize) * textYRatio
 	}
 
-	drawCross(screen, x + padding, y + padding, exitCrossSize, smallStrokeWidth, foregroundColor)
+	drawGeom := ebiten.GeoM{}
+	drawGeom.Translate(float64(textX), float64(textY))
+	drawOptions := &text.DrawOptions{
+		DrawImageOptions: ebiten.DrawImageOptions{
+			GeoM: drawGeom,
+		},
+		LayoutOptions: text.LayoutOptions{
+			PrimaryAlign: text.AlignCenter,
+			SecondaryAlign: text.AlignCenter,
+		},
+	}
+	textFace := text.GoTextFace{
+		Source: g.textFaceSource,
+		Size: statusMessageTextSize,
+	}
+	text.Draw(screen, messageText, &textFace, drawOptions)
+}
+
+func (g *Game) writeMessageLog(screen *ebiten.Image) {
+	if len(g.logText) == 0 { return }
+
+	textX, textY := g.getStatusDrawLocation()
+	drawGeom := ebiten.GeoM{}
+	drawGeom.Translate(float64(textX), float64(textY))
+	drawOptions := &text.DrawOptions{
+		DrawImageOptions: ebiten.DrawImageOptions{
+			GeoM: drawGeom,
+		},
+		LayoutOptions: text.LayoutOptions{
+			PrimaryAlign: text.AlignCenter,
+			SecondaryAlign: text.AlignCenter,
+			LineSpacing: logTextSize,
+		},
+	}
+	textFace := text.GoTextFace{
+		Source: g.textFaceSource,
+		Size: logTextSize,
+	}
+	text.Draw(screen, g.logText, &textFace, drawOptions)
+}
+
+func (g *Game) drawBusyIndicator(screen *ebiten.Image) {
+	if !g.isAiThinking { return }
+
+	x, y := g.getStatusDrawLocation()
+	animationFrame := time.Now().UnixMilli() / 100 % 10
+	drawBusyIndicatorCircle(screen, x, y, animationFrame)
+	drawBusyIndicatorCircle(screen, x, y, animationFrame + 10)
+}
+
+func drawBusyIndicatorCircle(screen *ebiten.Image, x float32, y float32, animationFrame int64) {
+	path := vector.Path{}
+	path.Arc(x, y, float32(animationFrame), 0, math.Pi * 2, vector.Clockwise)
+	color := ebiten.ColorScale{}
+	color.ScaleAlpha(1 - float32(animationFrame) / 20)
+	vector.StrokePath(screen, &path, &vector.StrokeOptions{Width: 1}, &vector.DrawPathOptions{AntiAlias: true, ColorScale: color})
+}
+
+func (g *Game) getStatusDrawLocation() (float32, float32) {
+	var textYRatio float32
+	isStatusMessageVisible, _ := g.state.GetWinState()
+	if isStatusMessageVisible {
+		textYRatio = 2.0 / 3.0
+	} else {
+		textYRatio = 0.5
+	}
+	gameFieldSize, textLocation := g.getGameFieldSize()
+	gameFieldSize -= g.getCellDrawSize()
+	var textX, textY float32
+	if textLocation == TextLocation_Side {
+		textX = gameFieldSize + (float32(g.screenWidth) - gameFieldSize) / 2
+		textY = float32(g.screenHeight) * textYRatio
+	} else {
+		textX = float32(g.screenWidth) / 2
+		textY = gameFieldSize + (float32(g.screenHeight) - gameFieldSize) * textYRatio
+	}
+	return textX, textY
 }
 
 func (g *Game) getHoveredCell() *game.Move {
@@ -236,7 +354,7 @@ func (g *Game) getHoveredCell() *game.Move {
 	hoveringCellRow, hoveringCellColumn := hoveringCellAbsoluteRow % (1 + game.Size), hoveringCellAbsoluteColumn % (1 + game.Size)
 	if (hoveringCellRow == 0) || (hoveringCellColumn == 0) { return nil }
 
-	return &game.Move {
+	return &game.Move{
 		Board: &game.BoardReference{RowNumber: hoveringBoardRowNumber, ColumnNumber: hoveringBoardColumnNumber},
 		RowNumber: hoveringCellRow - 1,
 		ColumnNumber: hoveringCellColumn - 1,
@@ -244,10 +362,31 @@ func (g *Game) getHoveredCell() *game.Move {
 }
 
 func (g *Game) getCellDrawSize() float32 {
-	superBoardDrawSize := float32(math.Min(float64(g.screenWidth) - float64(exitCrossSize + 2 * margin), float64(g.screenHeight)))
+	superBoardDrawSize, _ := g.getGameFieldSize()
 	cellCount := game.Size * (1 + game.Size) + 1
-	cellDrawSize := superBoardDrawSize / float32(cellCount)
+	cellDrawSize := float32(superBoardDrawSize) / float32(cellCount)
 	return cellDrawSize
+}
+
+func (g *Game) getGameFieldSize() (float32, byte) {
+	if g.screenWidth > g.screenHeight {
+		if float32(g.screenWidth) > float32(g.screenHeight) + minimumTextAreaWidth {
+			return float32(g.screenHeight), TextLocation_Side
+		}
+		return float32(g.screenWidth) - minimumTextAreaWidth, TextLocation_Side
+	}
+
+	availableWidth := float32(g.screenWidth) - exitCrossSize - 2 * margin
+	availableHeight := float32(g.screenHeight) - minimumTextAreaHeight
+	return minFloat32(availableWidth, availableHeight), TextLocation_Under
+}
+
+func minFloat32(x, y float32) float32 {
+	if x < y {
+		return x
+	} else {
+		return y
+	}
 }
 
 func (g *Game) getBoardDrawSize() float32 {
@@ -258,9 +397,9 @@ func getPlayers(playerSelection game.Player, aiDifficulty ai.Difficulty) (player
 	uiPlayer := createUIPlayer()
 	aiPlayer := factory.CreateAIPlayer(aiDifficulty)
 	if playerSelection == game.Cell_X {
-    return uiPlayer, aiPlayer
+		return uiPlayer, aiPlayer
 	} else {
-    return aiPlayer, uiPlayer
+		return aiPlayer, uiPlayer
 	}
 }
 
@@ -278,9 +417,14 @@ func (g *Game) play() {
 			g.activeUiPlayer = currentPlayer.(*uiPlayer)
 		} else {
 			g.activeUiPlayer = nil
+			g.isAiThinking = true
 		}
 
-		action, move := currentPlayer.GetMove(g.state, player.NilLog)
+		messageLog := player.CreateLog()
+		action, move := currentPlayer.GetMove(g.state, messageLog)
+		g.updateLogText(messageLog)
+		g.isAiThinking = false
+
 		switch action {
 		case player.Action_None:
 			return
@@ -289,6 +433,22 @@ func (g *Game) play() {
 		default:
 			panic(fmt.Sprintf("Unhandled action: %d", action))
 		}
+	}
+	g.activeUiPlayer = nil
+}
+
+func (g *Game) updateLogText(messageLog *player.MessageLog) {
+	g.logText = ""
+	messages := messageLog.GetMessages()
+	if len(messages) == 0 {
+		return
+	}
+
+	for index, message := range messages {
+		if index != 0 {
+			g.logText += "\n"
+		}
+		g.logText += message
 	}
 }
 
@@ -299,6 +459,11 @@ const exitButtonSize = exitCrossSize + padding * 2
 const smallStrokeWidth = float32(3)
 const largeStrokeWidth = float32(6)
 const cellPaddingRatio = float32(0.2)
+
+const minimumTextAreaWidth = float32(350)
+const minimumTextAreaHeight = float32(180)
+const statusMessageTextSize = float64(36)
+const logTextSize = float64(18)
 
 var foregroundColor = ebiten.ColorScale{}
 var crossColor = ebiten.ColorScale{}
@@ -314,10 +479,15 @@ var completedNaughtColor = ebiten.ColorScale{}
 
 var highlightColor = color.Gray{64}
 
+const (
+	TextLocation_Side = iota
+	TextLocation_Under
+)
+
 func init() {
 	setCrossColor(&crossColor)
 	setNaughtColor(&naughtColor)
-	
+
 	disabledColorScale := ebiten.ColorScale{}
 	disabledColorScale.SetR(0.5)
 	disabledColorScale.SetG(0.5)
@@ -328,7 +498,7 @@ func init() {
 	disabledCrossColor.ScaleWithColorScale(disabledColorScale)
 	setNaughtColor(&disabledNaughtColor)
 	disabledNaughtColor.ScaleWithColorScale(disabledColorScale)
-	
+
 	completedColorScale := ebiten.ColorScale{}
 	completedColorScale.SetR(0.2)
 	completedColorScale.SetG(0.2)
