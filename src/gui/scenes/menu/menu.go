@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image/color"
 	"math"
+	"runtime"
 	"time"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
@@ -175,13 +176,20 @@ func (t *TitleScreen) getMenuItems() []menuItem {
 	default: difficultySelection = "Hard"
 	}
 
-	return []menuItem {
+	menuItems := []menuItem {
 		*createSelectionItem("Player selection: ", playerSelection),
 		*createSelectionItem("AI difficulty: ", difficultySelection),
 		*createGapItem(),
 		*createActionItem("Start game"),
-		*createActionItem("Exit"),
 	}
+	if !isRunningInBrowser() {
+		menuItems = append(menuItems, *createActionItem("Exit"))
+	}
+	return menuItems
+}
+
+func isRunningInBrowser() bool {
+	return runtime.GOARCH == "wasm"
 }
 
 func (t *TitleScreen) drawMenuItems(screen *ebiten.Image, menuItems []menuItem) {
