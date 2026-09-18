@@ -183,13 +183,13 @@ func (t *TitleScreen) getMenuItems() []menuItem {
 		*createActionItem("Start game"),
 	}
 	if !isRunningInBrowser() {
-		menuItems = append(menuItems, *createActionItem("Exit"))
+		menuItems = append(menuItems, *createActionItem("Exit app"))
 	}
 	return menuItems
 }
 
 func isRunningInBrowser() bool {
-	return runtime.GOARCH == "wasm"
+	return runtime.GOOS == "js"
 }
 
 func (t *TitleScreen) drawMenuItems(screen *ebiten.Image, menuItems []menuItem) {

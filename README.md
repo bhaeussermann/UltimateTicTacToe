@@ -1,16 +1,18 @@
 # Ultimate Tic Tac Toe
 A Go application for playing Ultimate Tic Tac Toe.
 
-To run the application CLI execute the following command:
-
-```
-go run tictactoe-cli/tictactoe-cli.go
-```
+The GUI program is deployed online [here](https://ultimate-tic-tac-toe-pi.vercel.app/)
 
 To run the GUI execute:
 
 ```
-go run tictactoe-gui/tictactoe-gui.go
+go run src/main.go
+```
+
+To run the application CLI execute the following command:
+
+```
+go run src/tictactoe-cli/tictactoe-cli.go
 ```
 
 The program will have the player play against the AI. It allows the player to select if they will play as X and O (determining who plays first) as well as the AI difficulty.
