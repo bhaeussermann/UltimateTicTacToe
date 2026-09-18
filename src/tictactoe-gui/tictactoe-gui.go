@@ -1,11 +1,11 @@
-package main
+package gui
 
 import (
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/gui/game"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-func main() {
+func Main() {
   ebiten.SetWindowTitle("Ultimate Tic Tac Toe")
   ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
   ebiten.SetWindowSize(900, 600)
