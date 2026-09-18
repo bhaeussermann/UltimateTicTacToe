@@ -1,8 +1,6 @@
 # Ultimate Tic Tac Toe
 A Go application for playing Ultimate Tic Tac Toe.
 
-The GUI program is deployed online [here](https://ultimate-tic-tac-toe-pi.vercel.app/)
-
 To run the GUI execute:
 
 ```

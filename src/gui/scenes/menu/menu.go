@@ -183,7 +183,7 @@ func (t *TitleScreen) getMenuItems() []menuItem {
 		*createActionItem("Start game"),
 	}
 	if !isRunningInBrowser() {
-		menuItems = append(menuItems, *createActionItem("Exit app"))
+		menuItems = append(menuItems, *createActionItem("Exit"))
 	}
 	return menuItems
 }
