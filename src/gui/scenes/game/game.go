@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
+	gui "github.com/bhaeussermann/ultimate-tic-tac-toe/gui"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/gui/scenes"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai"
@@ -21,6 +22,7 @@ import (
 type Game struct {
 	textFaceSource *text.GoTextFaceSource
 	screenWidth, screenHeight int
+	pointerState *gui.PointerState
 	exitToScene scenes.GetNextScene
 
 	playerSelection game.Player
@@ -29,7 +31,6 @@ type Game struct {
 	logText string
 	isAiThinking bool
 	activeUiPlayer *uiPlayer
-	isClicking bool
 }
 
 func NewGame(playerSelection game.Player, aiDifficulty ai.Difficulty, exitToScene scenes.GetNextScene) (scenes.Scene, error) {
@@ -41,6 +42,7 @@ func NewGame(playerSelection game.Player, aiDifficulty ai.Difficulty, exitToScen
 	playerX, playerO := getPlayers(playerSelection, aiDifficulty)
 	game := &Game{
 		textFaceSource: textFaceSource,
+		pointerState: &gui.PointerState{},
 		exitToScene: exitToScene,
 		playerSelection: playerSelection,
 		playerX: playerX,
@@ -57,11 +59,9 @@ func (g *Game) SetScreenSize(width int, height int) {
 }
 
 func (g *Game) Update() scenes.SceneChange {
-	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		g.isClicking = false
-	} else if !g.isClicking {
-		g.isClicking = true
-		cursorX, cursorY := ebiten.CursorPosition()
+	cursorX, cursorY, didSelect := g.pointerState.GetSelectState()
+
+	if didSelect {
 		cursorXf, cursorYf := float32(cursorX), float32(cursorY)
 		exitClicked := (float32(g.screenWidth) - exitButtonSize - margin <= cursorXf && cursorXf <= float32(g.screenWidth) - margin) && (margin <= cursorYf && cursorYf <= exitButtonSize + margin)
 		if exitClicked {
@@ -72,9 +72,9 @@ func (g *Game) Update() scenes.SceneChange {
 		}
 
 		if g.activeUiPlayer != nil {
-			hoveredCell := g.getHoveredCell()
-			if (hoveredCell != nil) && g.state.CanPlaceIn(hoveredCell.Board) && g.state.CanPlace(hoveredCell) {
-				g.activeUiPlayer.setMove(hoveredCell)
+			selectedCell := g.getCellAtLocation(cursorX, cursorY)
+			if (selectedCell != nil) && g.state.CanPlaceIn(selectedCell.Board) && g.state.CanPlace(selectedCell) {
+				g.activeUiPlayer.setMove(selectedCell)
 			}
 		}
 	}
@@ -122,7 +122,7 @@ func (g *Game) drawSuperBoard(screen *ebiten.Image) {
 
 func (g *Game) drawHoveredCell(screen *ebiten.Image) {
 	if g.activeUiPlayer != nil {
-		hoveredCell := g.getHoveredCell()
+		hoveredCell := g.getCellAtLocation(g.pointerState.GetHoverState())
 		if (hoveredCell != nil) && g.state.CanPlaceIn(hoveredCell.Board) && g.state.CanPlace(hoveredCell) {
 			boardDrawSize := g.getBoardDrawSize()
 			cellDrawSize := g.getCellDrawSize()
@@ -343,11 +343,10 @@ func (g *Game) getStatusDrawLocation() (float32, float32) {
 	return textX, textY
 }
 
-func (g *Game) getHoveredCell() *game.Move {
+func (g *Game) getCellAtLocation(locationX, locationY int) *game.Move {
 	cellDrawSize := g.getCellDrawSize()
-	cursorX, cursorY := ebiten.CursorPosition()
-	cursorXf, cursorYf := float32(cursorX), float32(cursorY)
-	hoveringCellAbsoluteRow, hoveringCellAbsoluteColumn := byte(cursorYf / cellDrawSize), byte(cursorXf / cellDrawSize)
+	locationXf, locationYf := float32(locationX), float32(locationY)
+	hoveringCellAbsoluteRow, hoveringCellAbsoluteColumn := byte(locationYf / cellDrawSize), byte(locationXf / cellDrawSize)
 	hoveringBoardRowNumber, hoveringBoardColumnNumber := hoveringCellAbsoluteRow / (1 + game.Size), hoveringCellAbsoluteColumn / (1 + game.Size)
 	if (hoveringBoardRowNumber >= game.Size) || (hoveringBoardColumnNumber >= game.Size) { return nil }
 

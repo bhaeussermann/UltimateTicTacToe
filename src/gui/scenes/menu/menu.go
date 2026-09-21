@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/game"
+	gui "github.com/bhaeussermann/ultimate-tic-tac-toe/gui"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/gui/scenes"
 	gamescene "github.com/bhaeussermann/ultimate-tic-tac-toe/gui/scenes/game"
 	"github.com/bhaeussermann/ultimate-tic-tac-toe/player/ai"
@@ -23,7 +24,7 @@ type TitleScreen struct {
 
 	backgroundPixels []byte
 	screenWidth, screenHeight int
-	isMouseButtonPressed bool
+	pointerState *gui.PointerState
 
 	selectedMenuItemIndex int
 
@@ -46,6 +47,7 @@ func NewTitleScreen(playerSelection game.Player, aiDifficulty ai.Difficulty) (sc
 		regularTextFaceSource: regularTextFaceSource,
 		boldTextFaceSource: boldTextFaceSource,
 		backgroundPixels: []byte{},
+		pointerState: &gui.PointerState{},
 		selectedMenuItemIndex: -1,
 		playerSelection: playerSelection,
 		aiDifficulty: aiDifficulty,
@@ -62,9 +64,10 @@ func (t *TitleScreen) SetScreenSize(width int, height int) {
 }
 
 func (t *TitleScreen) Update() scenes.SceneChange {
-	t.selectedMenuItemIndex = t.getSelectedMenuItemIndex()
+	selectedMenuItemIndex, didSelect := t.getMenuItemSelection()
+	t.selectedMenuItemIndex = selectedMenuItemIndex
 
-	if !t.isMouseButtonPressed && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+	if didSelect {
 		switch t.selectedMenuItemIndex {
 		case 0: {
 			if t.playerSelection == game.Cell_X { t.playerSelection = game.Cell_O } else { t.playerSelection = game.Cell_X }
@@ -90,12 +93,10 @@ func (t *TitleScreen) Update() scenes.SceneChange {
 		}
 	}
 
-	t.isMouseButtonPressed = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
-
 	return scenes.SceneChange{}
 }
 
-func (t *TitleScreen) getSelectedMenuItemIndex() int {
+func (t *TitleScreen) getMenuItemSelection() (int, bool) {
 	menuItems := t.getMenuItems()
 	menuItemsHeight := 0.0
 	for _, menuItem := range menuItems {
@@ -106,11 +107,11 @@ func (t *TitleScreen) getSelectedMenuItemIndex() int {
 		}
 	}
 		
-	_, cursorY := ebiten.CursorPosition()
+	_, cursorY, didSelect := t.pointerState.GetSelectState()
 	titleHeight := titleTopMargin + titleTextSize + textMarginHeight * 2
 	currentMenuItemTop := (float64(t.screenHeight) - menuItemsHeight - titleHeight) / 2 + titleHeight
 	if cursorY < int(currentMenuItemTop) {
-		return -1
+		return -1, false
 	}
 
 	for menuItemIndex, menuItem := range menuItems {
@@ -119,12 +120,12 @@ func (t *TitleScreen) getSelectedMenuItemIndex() int {
 		} else {
 			currentMenuItemBottom := currentMenuItemTop + menuItemTextSize + textMarginHeight * 2
 			if int(currentMenuItemTop) <= cursorY && cursorY <= int(currentMenuItemBottom) {
-				return menuItemIndex
+				return menuItemIndex, didSelect
 			}
 			currentMenuItemTop = currentMenuItemBottom
 		}
 	}
-	return -1
+	return -1, false
 }
 
 func (t *TitleScreen) Draw(screen *ebiten.Image) {
